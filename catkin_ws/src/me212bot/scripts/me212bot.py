@@ -43,22 +43,22 @@ class Arduino():
             serialData = self.comm.readline()
             
             # 2. parse the string e.g. "0.1,0.2,0.1" to doubles
-            splitData = serialData.split(',');
+            splitData = serialData.split(',')
             
             try:
-                x     = float(splitData[0]);
-                y     = float(splitData[1]);
-                theta = float(splitData[2]);
+                x     = float(splitData[0])
+                y     = float(splitData[1])
+                theta = float(splitData[2])
                 hz    = 1.0 / (rospy.Time.now().to_sec() - self.prevtime.to_sec())
                 
                 cnt += 1
-                print 'x=', x, ' y=', y, ' theta =', theta, ' hz =', hz; 
+                print(f'x={x} y={y} theta={theta} hz ={hz}')
                     
                 self.prevtime = rospy.Time.now()
                 
             except:
                 # print out msg if there is an error parsing a serial msg
-                print 'Cannot parse', splitData
+                print(f'Cannot parse {splitData}')
                 ex_type, ex, tb = sys.exc_info()
                 traceback.print_tb(tb)
 
