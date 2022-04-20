@@ -4,65 +4,43 @@ cmd "0-roscore" {
     host = "localhost";
 }
 
-
-cmd "1-kinect" {
-    exec = "roslaunch freenect_launch freenect.launch depth_registration:=true";
-    host = "localhost";
-}
-
-cmd "1-kinect-calibrate" {
-    exec = "rosrun camera_calibration cameracalibrator.py --size 8x6 --square 0.025 image:=/camera/rgb/image_color";
+cmd "1-frames" {
+    exec = "roslaunch me212bot frames.launch";
     host = "localhost";
 }
 
 cmd "2-rviz" {
-    exec = "roslaunch me212cv viz.launch";
+    exec = "roslaunch me212bot viz.launch";
     host = "localhost";
 }
 
-cmd "3-cameratf" {
-    exec = "roslaunch me212cv frames.launch";
+cmd "3-kinect" {
+    exec = "roslaunch freenect_launch freenect.launch depth_registration:=true";
     host = "localhost";
 }
 
-cmd "4-object-detection" {
-    exec = "rosrun me212cv object_detection.py";
+cmd "4-apriltag" {
+    exec = "roslaunch apriltags apriltags.launch";
     host = "localhost";
 }
 
-cmd "5-denoising" {
-    exec = "rosrun me212cv denoising.py";
+cmd "5-robot" {
+    exec = "rosrun me212bot me212bot_node.py";
     host = "localhost";
 }
 
-cmd "6-hough-transform" {
-    exec = "rosrun me212cv hough_transform.py";
+cmd "6-navigation" {
+    exec = "rosrun me212bot apriltag_navi.py";
     host = "localhost";
 }
 
-script "run-kinect-calibrate" {
+script "run" {
     start cmd "0-roscore";
     wait ms 1000;
-    start cmd "1-kinect";
-    start cmd "1-kinect-calibrate";
-}
-
-script "run-object-detect" {
-    start cmd "0-roscore";
-    wait ms 1000;
-    start cmd "1-kinect";
+    start cmd "1-frames";
+    wait ms 500;
     start cmd "2-rviz";
-    start cmd "3-cameratf";
-    start cmd "4-object-detection";
-}
-
-script "run-denoising-filter" {
-    start cmd "5-denoising";
-}
-
-script "run-hough-transform" {
-    start cmd "0-roscore";
-    wait ms 1000;
-    start cmd "1-kinect";
-    start cmd "6-hough-transform";
+    start cmd "3-kinect";
+    start cmd "4-apriltag";
+    start cmd "5-robot";
 }
