@@ -32,6 +32,15 @@ void setup() {
     md.enableDrivers();
     md.setM2Speed(0);
 
+    while (true) {
+        Serial.println("PBAR");
+        if (Serial.available() > 0) {
+            String commandString = Serial.readStringUntil('\n');
+            if (commandString.compareTo("LOCK")) break;
+        }
+        delay(100);
+    }
+
     last_time = millis();
 }
 

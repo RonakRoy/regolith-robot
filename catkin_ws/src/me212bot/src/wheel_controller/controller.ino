@@ -17,9 +17,18 @@ boolean usePathPlanner = true;
 
 void setup() {
     Serial.begin(115200);       // initialize Serial Communication
-    encoder.init();  // connect with encoder
+    encoder.init();             // connect with encoder
     wheelVelCtrl.init();        // connect with motor
     delay(1e3);                 // delay 1000 ms so the robot doesn't drive off without you
+
+    while (true) {
+        Serial.println("DRIVE");
+        if (Serial.available() > 0) {
+            String commandString = Serial.readStringUntil('\n');
+            if (commandString.compareTo("LOCK")) break;
+        }
+        delay(100);
+    }
 }
 
 void loop() {

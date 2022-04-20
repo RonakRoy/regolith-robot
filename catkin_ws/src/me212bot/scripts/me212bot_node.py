@@ -12,14 +12,16 @@ from geometry_msgs.msg import Pose, Quaternion
 import helper
 from me212bot.msg import WheelCmdVel
 
-serialComm = serial.Serial('/dev/ttyACM0', 115200, timeout = 5)
+drive_arduino = None
+pbar_arduino = None
+scoop_arduino = None
 
 ## main function (Need to modify)
 def main():
     rospy.init_node('me212bot', anonymous=True)
     
-    odometry_thread = threading.Thread(target = read_odometry_loop)
-    odometry_thread.start()
+    arduino_thread = threading.Thread(target = arduino_thread_target)
+    arduino_thread.start()
     
     ## 1. Initialize a subscriber
     rospy.Subscriber('/cmdvel', WheelCmdVel, cmdvel_callback)
@@ -30,42 +32,79 @@ def main():
 ## msg handling function (Need to modify)
 def cmdvel_callback(msg):  
     ## 2. Send msg.desiredWV_R and msg.desiredWV_L to Arduino.
-    strCmd =  str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n'
-    serialComm.write(strCmd)
-    
+    strCmd = str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n'
+    drive_arduino.write(strCmd)
 
-
-# read_odometry_loop() is for reading odometry from Arduino and publish to rostopic. (No need to modify)
-def read_odometry_loop():
+def arduino_thread_target():
     prevtime = rospy.Time.now()
+
+    for i in range(3):
+        serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200, timeout = 5)
+
+        serial_data = serial_comm.readline()
+        if serial_data == "DRIVE":
+            drive_arduino = serial_comm
+            drive_arduino.write("LOCK\n")
+            print "FOUND DRIVE ARDUINO"
+        elif serial_data == "PBAR":
+            pbar_arduino = serial_comm
+            drive_arduino.write("LOCK\n")
+            print "FOUND PBAR ARDUINO"
+        elif serial_data == "SCOOP":
+            scoop_arduino = serial_comm
+            drive_arduino.write("LOCK\n")
+            print "FOUND SCOOP ARDUINO"
+
     while not rospy.is_shutdown():
-        # get a line of string that represent current odometry from serial
-        serialData = serialComm.readline()
-        
-        # split the string e.g. "0.1,0.2,0.1" with cammas
-        splitData = serialData.split(',')
-        
-        # parse the 3 split strings into 3 floats
-        try:
-            x     = float(splitData[0])
-            y     = float(splitData[1])
-            theta = float(splitData[2])
+        if drive_arduino is not None:
+            serialData = drive_arduino.readline()
+            splitData = serialData.split(',')
             
-            hz    = 1.0 / (rospy.Time.now().to_sec() - prevtime.to_sec())
-            prevtime = rospy.Time.now()
-            
-            print 'x=', x, ' y=', y, ' theta =', theta, ' hz =', hz
-            
-            # publish odometry as Pose msg
-            odom = Pose()
-            odom.position.x = x
-            odom.position.y = y
-            
-            qtuple = tfm.quaternion_from_euler(0, 0, theta)
-            odom.orientation = Quaternion(qtuple[0], qtuple[1], qtuple[2], qtuple[3])
-        except:
-            # print out msg if there is an error parsing a serial msg
-            print 'Cannot parse', splitData
+            try:
+                x     = float(splitData[0])
+                y     = float(splitData[1])
+                theta = float(splitData[2])
+                
+                hz    = 1.0 / (rospy.Time.now().to_sec() - prevtime.to_sec())
+                prevtime = rospy.Time.now()
+                
+                print 'x=', x, ' y=', y, ' theta =', theta, ' hz =', hz
+                
+                # publish odometry as Pose msg
+                odom = Pose()
+                odom.position.x = x
+                odom.position.y = y
+                
+                qtuple = tfm.quaternion_from_euler(0, 0, theta)
+                odom.orientation = Quaternion(qtuple[0], qtuple[1], qtuple[2], qtuple[3])
+            except:
+                # print out msg if there is an error parsing a serial msg
+                print 'Cannot parse', splitData
+
+        if pbar_arduino is not None:
+            serialData = pbar_arduino.readline()
+
+            try: 
+                pbar_angle = float(splitData[0])
+
+                print 'pbar=', pbar_angle
+            except:
+                print 'Cannot parse', splitData
+
+
+        if scoop_arduino is not None:
+            serialData = pbar_arduino.readline()
+            splitData = serialData.split(',')
+
+            try:
+                wrist = float(splitData[0])
+                jaw = float(splitData[1])
+                
+                print 'wrist=', wrist, ' jaw=', jaw
+
+            except:
+                # print out msg if there is an error parsing a serial msg
+                print 'Cannot parse', splitData
             
 
 if __name__=='__main__':

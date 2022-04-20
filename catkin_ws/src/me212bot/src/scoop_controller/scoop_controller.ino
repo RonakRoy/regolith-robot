@@ -14,7 +14,14 @@ int wrist_pos = 0;
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("Scoop Controller");
+    while (true) {
+        Serial.println("SCOOP");
+        if (Serial.available() > 0) {
+            String commandString = Serial.readStringUntil('\n');
+            if (commandString.compareTo("LOCK")) break;
+        }
+        delay(100);
+    }
 
     pinMode(WRIST_STEP, OUTPUT);
     pinMode(WRIST_DIR, OUTPUT);
