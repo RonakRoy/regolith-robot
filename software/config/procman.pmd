@@ -24,13 +24,14 @@ cmd "4-apriltag" {
     host = "localhost";
 }
 
-cmd "5-robot" {
-    exec = "rosrun me212bot me212bot_node.py";
+cmd "5-localization" {
+    exec = "rosrun me212bot apriltag_localization.py";
     host = "localhost";
 }
 
-cmd "6-navigation" {
-    exec = "rosrun me212bot apriltag_navi.py";
+
+cmd "6-robot" {
+    exec = "rosrun me212bot me212bot_node.py";
     host = "localhost";
 }
 
