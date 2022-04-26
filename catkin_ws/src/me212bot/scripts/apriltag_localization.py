@@ -1,8 +1,5 @@
 #!/usr/bin/python
 
-# 2.12 Lab 3 AprilTag Navigation: use AprilTag to get current robot (X,Y,Theta) in world frame, and to navigate to target (X,Y,Theta)
-# Peter Yu Sept 2016
-
 import rospy
 import tf
 import numpy as np
