@@ -29,8 +29,12 @@ cmd "5-localization" {
     host = "localhost";
 }
 
+cmd "6-objectdetection" {
+    exec = "rosrun me212bot object_detector.py";
+    host = "localhost";
+}
 
-cmd "6-robot" {
+cmd "7-robot" {
     exec = "rosrun me212bot me212bot_node.py";
     host = "localhost";
 }
