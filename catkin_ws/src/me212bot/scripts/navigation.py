@@ -16,7 +16,7 @@ from apriltags.msg import AprilTagDetections
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 
 
-rospy.init_node('apriltag_navi', anonymous=True)
+rospy.init_node('navigation', anonymous=True)
 lr = tf.TransformListener()
 br = tf.TransformBroadcaster()
     
@@ -47,23 +47,12 @@ def constant_vel_loop():
         velcmd_pub.publish(wcv) 
         
         rate.sleep() 
-
-## apriltag msg handling function (Need to modify for Task 2)
-def apriltag_callback(data):
-    # use apriltag pose detection to find where is the robot
-    for detection in data.detections:
-        if detection.id == 1:   # tag id is the correct one
-            poselist_tag_cam = pose2poselist(detection.pose)
-            poselist_tag_base = transformPose(lr, poselist_tag_cam, 'camera', 'robot_base')
-            poselist_base_tag = invPoselist(poselist_tag_base)
-            poselist_base_map = transformPose(lr, poselist_base_tag, 'apriltag', 'map')
-            pubFrame(br, pose = poselist_base_map, frame_id = '/robot_base', parent_frame_id = '/map')
-
-
+    
 ## navigation control loop (No need to modify)
 def navi_loop():
     velcmd_pub = rospy.Publisher("/cmdvel", WheelCmdVel, queue_size = 1)
-    target_pose2d = [0.25, 0, np.pi]
+    target_index=0;
+    target_pose2d = TARGET_LIST[target_index] # [0.25, 0, np.pi]
     rate = rospy.Rate(100) # 100hz
     
     wcv = WheelCmdVel()
@@ -79,7 +68,7 @@ def navi_loop():
             print '1. Tag not in view, Stop'
             wcv.desiredWV_R = 0  # right, left
             wcv.desiredWV_L = 0
-            velcmd_pub.publish(wcv)  
+            velcmd_pub.publish(wcv) 
             rate.sleep()
             continue
         
@@ -105,16 +94,8 @@ def navi_loop():
         # print 'norm delta', np.linalg.norm( pos_delta ), 'diffrad', diffrad(robot_yaw, target_pose2d[2])
         # print 'heading_err_cross', heading_err_cross
         
-
-
-
-        
-        # if arrived or (np.linalg.norm( pos_delta ) < 0.08 and np.fabs(diffrad(robot_yaw, target_pose2d[2]))<0.05) :
-        #     print 'Case 2.1  Stop'
-        #     wcv.desiredWV_R = 0  
-        #     wcv.desiredWV_L = 0
-        #     arrived = True
-        # elif np.linalg.norm( pos_delta ) < 0.08:
+       
+	# elif np.linalg.norm( pos_delta ) < 0.08:
         #     arrived_position = True
         #     if diffrad(robot_yaw, target_pose2d[2]) > 0:
         #         print 'Case 2.2.1  Turn right slowly'      
@@ -139,7 +120,14 @@ def navi_loop():
         #         wcv.desiredWV_L = -0.1
 
         # 2-axis Proportional Control Implementation
-        dX = np.linalg.norm(pos_delta)
+        
+        if arrived or (np.linalg.norm( pos_delta ) < 0.08 and np.fabs(diffrad(robot_yaw, target_pose2d[2]))<0.05) :
+            print('arrived at point')
+            wcv.desiredWV_R = 0  
+            wcv.desiredWV_L = 0
+            arrived = True
+	    target_index += 1
+	dX = np.linalg.norm(pos_delta)
         dTheta = heading_err_cross
         vel_desired =  -(0.1 - dX)*0.25
         angVel_desired = (0 - dTheta)*0.25
