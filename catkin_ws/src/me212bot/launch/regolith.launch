@@ -1,2 +1,16 @@
 <launch>
-<include 
+    <!-- Static Transforms -->
+   <node name="tf_apriltag_0_map" pkg="tf" type="static_transform_publisher" args="2.4 0.6 0.44 -1.571 0 1.571 map apriltag_0 10" />
+   <node name="tf_apriltag_4_map" pkg="tf" type="static_transform_publisher" args="2.7 2.3 0.44 -1.571 0 1.571 map apriltag_4 10" />
+   <node name="tf_apriltag_7_map" pkg="tf" type="static_transform_publisher" args="0   2.4 0.44 0 0 1.571 map apriltag_7 10" />
+   <node name="tf_apriltag_2_map" pkg="tf" type="static_transform_publisher" args="2.6 2.7 0.44 0 0 1.571 map apriltag_2 10" />
+
+   <node name="tf_at_ref_base" pkg="tf" type="static_transform_publisher" args="0 0 0 -0.5 0.5 -0.5 0.5 camera_link apriltag_ref 10" />
+   <node name="tf_camera_link_base" pkg="tf" type="static_transform_publisher" args="-0.24 0 0.35 0 0 0 robot_base camera_link 10" />
+
+    <!-- RVIZ -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find me212bot)/config/regolith.rviz" />
+    <param name="robot_description" command="$(find xacro)/xacro.py $(find me212bot)/model/me212bot.xacro"/>
+
+    <!-- Kinect -->
+</launch>
