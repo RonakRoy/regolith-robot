@@ -75,12 +75,11 @@ void RobotPose::update(float dThetaL, float dThetaR) {
 }
 
 void DeltaRobotPose::calculate(float dThetaL, float dThetaR) {
+    // robot distance traveled in meters
+    dist = (r / 2.0) * (dThetaR + dThetaL); 
+
     // orientation angle theta increment in radians
     dTh = (r / (2.0 * b)) * (dThetaR - dThetaL);
-        
-    // robot X, Y position increment in meters
-    dX = (r / 2.0) * cos(Th) * (dThetaR + dThetaL); 
-    dY = (r / 2.0) * sin(Th) * (dThetaR + dThetaL);
 }
 
 // PIController Class function implementation (not the focus of this lab)
