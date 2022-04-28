@@ -25,7 +25,7 @@ cmd "4-apriltag" {
 }
 
 cmd "5-localization" {
-    exec = "rosrun me212bot apriltag_localization.py";
+    exec = "rosrun me212bot localization.py";
     host = "localhost";
 }
 

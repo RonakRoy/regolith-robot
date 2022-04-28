@@ -16,6 +16,8 @@ drive_arduino = None
 pbar_arduino = None
 scoop_arduino = None
 
+odom_publisher = rospy.Subscriber('/odom', Pose, queue_size = 1)
+
 ## main function (Need to modify)
 def main():
     rospy.init_node('me212bot', anonymous=True)
@@ -68,15 +70,16 @@ def arduino_thread_target():
                 hz    = 1.0 / (rospy.Time.now().to_sec() - prevtime.to_sec())
                 prevtime = rospy.Time.now()
                 
-                print 'x=', x, ' y=', y, ' theta =', theta, ' hz =', hz
+                # print 'x=', x, ' y=', y, ' theta =', theta, ' hz =', hz
                 
                 # publish odometry as Pose msg
                 odom = Pose()
                 odom.position.x = x
                 odom.position.y = y
-                
                 qtuple = tfm.quaternion_from_euler(0, 0, theta)
                 odom.orientation = Quaternion(qtuple[0], qtuple[1], qtuple[2], qtuple[3])
+
+                odom_publisher.publish(odom)
             except:
                 # print out msg if there is an error parsing a serial msg
                 print 'Cannot parse', splitData

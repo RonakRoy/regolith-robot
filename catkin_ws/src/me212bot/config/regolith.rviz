@@ -5,6 +5,8 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
+        - /Grid1
+        - /Grid1/Offset1
         - /TF1/Frames1
         - /PointCloud21
         - /PointCloud1
@@ -28,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Blob Detection
+    SyncSource: PointCloud2
 Visualization Manager:
   Class: ""
   Displays:
@@ -85,6 +87,15 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
+        map:
+          apriltag_0:
+            {}
+          apriltag_2:
+            {}
+          apriltag_4:
+            {}
+          apriltag_7:
+            {}
         robot_base:
           camera_link:
             apriltag_ref:
@@ -233,7 +244,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: camera_link
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -254,22 +265,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 6.08139896
+      Distance: 7.43839264
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.0329165012
-        Y: 0.0532703996
-        Z: 0.292374015
+        X: 1.10247219
+        Y: 1.51256943
+        Z: 0.293412834
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.409800798
+      Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.38541436
+      Yaw: 3.14040995
     Saved: ~
 Window Geometry:
   Blob Detection:
@@ -293,5 +304,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1215
-  X: 65
-  Y: 24
+  X: 69
+  Y: 33

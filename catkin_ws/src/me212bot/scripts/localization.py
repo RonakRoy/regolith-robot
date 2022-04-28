@@ -11,12 +11,12 @@ from me212bot.msg import WheelCmdVel
 from apriltags.msg import AprilTagDetections
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 
-
-rospy.init_node('apriltag_navi', anonymous=True)
+rospy.init_node('localization', anonymous=True)
 lr = tf.TransformListener()
 br = tf.TransformBroadcaster()
     
 def main():
+    pubFrame(br, pose=[0.18, 0.18, 0, 0, 0, 0], frame_id = '/robot_base', parent_frame_id = '/map')
     apriltag_sub = rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
     
     rospy.sleep(1)    
@@ -37,11 +37,12 @@ def apriltag_callback(data):
             x = [corner.x for corner in detection.corners2d]
             y = [corner.y for corner in detection.corners2d]
 
-            print x, y
+            # print x, y
 
+            # 3000 is the max practical area, but looks pretty good.
             area = -0.5 * ((x[0]*y[1] + x[1]*y[2] + x[2]*y[3] + x[3]*y[0]) - (x[1]*y[0] + x[2]*y[1] + x[3]*y[2] + x[0]*y[3]))
 
-            print "found ", detection.id, " with area ", area
+            # print "found ", detection.id, " with area ", area
 
             poselist_tag_cam = pose2poselist(detection.pose)
             poselist_tag_base = transformPose(lr, poselist_tag_cam, 'apriltag_ref', 'robot_base')
@@ -56,10 +57,10 @@ def apriltag_callback(data):
             areas.append(area)
             poses.append(poselist_base_map)
 
-    print "Found apriltag ids ", ids
+    # print "Found apriltag ids ", ids
 
     if i_ma != -1:
-        print "Using apriltag with id ", ids[i_ma]
+        # print "Using apriltag with id ", ids[i_ma]
         pubFrame(br, pose = poses[i_ma], frame_id = '/robot_base', parent_frame_id = '/map')
 
 if __name__=='__main__':
