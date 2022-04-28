@@ -1,7 +1,4 @@
 <launch>
-<<<<<<< HEAD
-<include 
-=======
     <!-- Static Transforms -->
    <node name="tf_apriltag_0_map" pkg="tf" type="static_transform_publisher" args="2.4 0.6 0.44 -1.571 0 1.571 map apriltag_0 10" />
    <node name="tf_apriltag_4_map" pkg="tf" type="static_transform_publisher" args="2.7 2.3 0.44 -1.571 0 1.571 map apriltag_4 10" />
@@ -17,4 +14,3 @@
 
     <!-- Kinect -->
 </launch>
->>>>>>> 653f354443ce6d1c6e8e87ed59e530d3e35b2e1f

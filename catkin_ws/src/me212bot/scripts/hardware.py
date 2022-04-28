@@ -48,6 +48,7 @@ def drive_thread_target():
 
             for i in range(10):
                 serial_data = serial_comm.readline()
+                print serial_data
                 if serial_data.strip() == "DRIVE":
                     drive_arduino = serial_comm
                     drive_arduino.write("LOCK")
