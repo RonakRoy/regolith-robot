@@ -102,7 +102,9 @@ def pbar_thread_target():
 
             try: 
                 pbar_angle = float(splitData[0])
-
+		pbar = PbarPose()
+		pbar.pbar = pbar_angle
+		pbar_publisher.publish(pbar)
                 print 'pbar=', pbar_angle
             except:
                 print 'Cannot parse', splitData
@@ -132,7 +134,10 @@ def scoop_thread_target():
             try:
                 wrist = float(splitData[0])
                 jaw = float(splitData[1])
-                
+		scoop = ScoopPose()
+		scoop.wrist = wrist
+		scoop.jaw = jaw
+		scoop_publisher.publish(scoop)                
                 print 'wrist=', wrist, ' jaw=', jaw
 
             except:

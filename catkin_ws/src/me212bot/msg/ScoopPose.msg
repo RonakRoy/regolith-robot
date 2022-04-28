@@ -1,3 +1,3 @@
 Header header
-float64 base
-float64 scoop
+float64 wrist
+float64 jaw
