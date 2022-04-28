@@ -71,10 +71,9 @@ class RobotPose {
 
 class DeltaRobotPose {
   public:
-    float dX, dY;          // robot X,Y position in meters
-    float dTh;             // robot orientation in rad
+    double dist, dTh;
     
-    RobotPose(): dTh(0), dX(0), dY(0) {}
+    DeltaRobotPose(): dist(0), dTh(0) {}
       
     void calculate(float dThetaL, float dThetaR); // update the odometry from delta in R and L wheel positions
 };
@@ -125,11 +124,9 @@ class SerialComm {
     void send(const DeltaRobotPose& deltaRobotPose) {
         unsigned long current_time = micros();
         if (current_time - prevSerialTime >= SERIAL_PERIOD_MICROS) {
-            Serial.print(robotPose.dX, 6);
+            Serial.print(deltaRobotPose.dist, 18);
             Serial.print(",");
-            Serial.print(robotPose.dY, 6);
-            Serial.print(",");
-            Serial.print(robotPose.dTh, 6);
+            Serial.print(deltaRobotPose.dTh, 18);
             Serial.println("");
             prevSerialTime = current_time;
         }

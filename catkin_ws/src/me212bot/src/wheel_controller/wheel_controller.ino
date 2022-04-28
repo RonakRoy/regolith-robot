@@ -26,7 +26,8 @@ void setup() {
         Serial.println("DRIVE");
         if (Serial.available() > 0) {
             String commandString = Serial.readStringUntil('\n');
-            if (commandString.compareTo("LOCK\n")) break;
+            commandString.trim();
+            if (commandString.compareTo("LOCK")) break;
         }
         delay(100);
     }

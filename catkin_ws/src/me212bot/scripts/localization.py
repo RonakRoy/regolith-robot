@@ -21,7 +21,7 @@ odom_queue = Queue()
 apriltag_queue = Queue()
     
 def main():
-    rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
+    # rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
     rospy.Subscriber("/odom", PoseStamped, odom_callback, queue_size = 1)
     
     thread = threading.Thread(target = thread_target)
@@ -38,6 +38,12 @@ def thread_target():
     while not rospy.is_shutdown():
         (trans,rot) = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
         odom = odom_queue.get()
+
+        rot = tfm.quaternionMultiply(tfm.quaternion_from_euler([0,0,odom.delta_theta]), rot)
+        th = tfm.euler_from_quaternion(rot)[2]
+        trans = np.array(trans) + np.array([odom.distance * np.cos(th), odom.distance * np.sin(th), 0])
+
+        pubFrame(br, pose = trans.tolist() + list(rot), frame_id = '/robot_base', parent_frame_id = '/map')
 
 def odom_callback(msg):
     odom_queue.put(msg)
