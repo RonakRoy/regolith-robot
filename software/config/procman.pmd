@@ -25,7 +25,11 @@ cmd "4-apriltag" {
 }
 
 cmd "5-localization" {
+<<<<<<< HEAD
     exec = "rosrun me212bot apriltag_localization.py";
+=======
+    exec = "rosrun me212bot localization.py";
+>>>>>>> 653f354443ce6d1c6e8e87ed59e530d3e35b2e1f
     host = "localhost";
 }
 
@@ -34,8 +38,13 @@ cmd "6-objectdetection" {
     host = "localhost";
 }
 
+<<<<<<< HEAD
 cmd "7-robot" {
     exec = "rosrun me212bot me212bot_node.py";
+=======
+cmd "7-hardware" {
+    exec = "rosrun me212bot hardware.py";
+>>>>>>> 653f354443ce6d1c6e8e87ed59e530d3e35b2e1f
     host = "localhost";
 }
 

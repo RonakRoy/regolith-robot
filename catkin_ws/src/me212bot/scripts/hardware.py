@@ -7,7 +7,7 @@ import rospy
 import threading
 import serial
 import tf.transformations as tfm
-from geometry_msgs.msg import Pose, Quaternion
+from geometry_msgs.msg import PoseStamped, Quaternion
 
 import helper
 from me212bot.msg import WheelCmdVel
@@ -16,16 +16,23 @@ drive_arduino = None
 pbar_arduino = None
 scoop_arduino = None
 
+odom_publisher = rospy.Subscriber('/odom', PoseStamped, queue_size = 1)
+
 ## main function (Need to modify)
 def main():
     rospy.init_node('me212bot', anonymous=True)
     
-    arduino_thread = threading.Thread(target = arduino_thread_target)
-    arduino_thread.start()
+    drive_thread = threading.Thread(target = drive_thread_target)
+    drive_thread.start()
+
+    pbar_thread = threading.Thread(target = pbar_thread_target)
+    pbar_thread.start()
+
+    scoop_thread = threading.Thread(target = scoop_thread_target)
+    scoop_thread.start()
     
     ## 1. Initialize a subscriber
     rospy.Subscriber('/cmdvel', WheelCmdVel, cmdvel_callback)
-    
     rospy.spin()
 
 
@@ -35,9 +42,7 @@ def cmdvel_callback(msg):
     strCmd = str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n'
     drive_arduino.write(strCmd)
 
-def arduino_thread_target():
-    prevtime = rospy.Time.now()
-
+def drive_thread_target():
     for i in range(3):
         serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200, timeout = 5)
 
@@ -46,42 +51,43 @@ def arduino_thread_target():
             drive_arduino = serial_comm
             drive_arduino.write("LOCK\n")
             print "FOUND DRIVE ARDUINO"
-        elif serial_data == "PBAR":
-            pbar_arduino = serial_comm
-            drive_arduino.write("LOCK\n")
-            print "FOUND PBAR ARDUINO"
-        elif serial_data == "SCOOP":
-            scoop_arduino = serial_comm
-            drive_arduino.write("LOCK\n")
-            print "FOUND SCOOP ARDUINO"
 
-    while not rospy.is_shutdown():
-        if drive_arduino is not None:
+    if drive_arduino is not None:
+        while not rospy.is_shutdown():
             serialData = drive_arduino.readline()
             splitData = serialData.split(',')
             
             try:
-                x     = float(splitData[0])
-                y     = float(splitData[1])
-                theta = float(splitData[2])
-                
-                hz    = 1.0 / (rospy.Time.now().to_sec() - prevtime.to_sec())
-                prevtime = rospy.Time.now()
-                
-                print 'x=', x, ' y=', y, ' theta =', theta, ' hz =', hz
+                dx  = float(splitData[0])
+                dy  = float(splitData[1])
+                dth = float(splitData[2])
                 
                 # publish odometry as Pose msg
-                odom = Pose()
-                odom.position.x = x
-                odom.position.y = y
-                
-                qtuple = tfm.quaternion_from_euler(0, 0, theta)
-                odom.orientation = Quaternion(qtuple[0], qtuple[1], qtuple[2], qtuple[3])
+                odom = PoseStamped()
+                odom.header.stamp = rospy.Time.now()
+                odom.pose.position.x = dx
+                odom.pose.position.y = dy
+                qtuple = tfm.quaternion_from_euler(0, 0, dth)
+                odom.pose.orientation = Quaternion(qtuple[0], qtuple[1], qtuple[2], qtuple[3])
+
+                odom_publisher.publish(odom)
             except:
                 # print out msg if there is an error parsing a serial msg
                 print 'Cannot parse', splitData
+            
+def pbar_thread_target():
+    for i in range(3):
+        serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200, timeout = 5)
 
-        if pbar_arduino is not None:
+        serial_data = serial_comm.readline()
+        if serial_data == "PBAR":
+            pbar_arduino = serial_comm
+            drive_arduino.write("LOCK\n")
+            print "FOUND PBAR ARDUINO"
+
+    prevtime = rospy.Time.now()
+    if pbar_arduino is not None:
+        while not rospy.is_shutdown():
             serialData = pbar_arduino.readline()
 
             try: 
@@ -92,7 +98,19 @@ def arduino_thread_target():
                 print 'Cannot parse', splitData
 
 
-        if scoop_arduino is not None:
+def scoop_thread_target():
+    for i in range(3):
+        serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200, timeout = 5)
+
+        serial_data = serial_comm.readline()
+        if serial_data == "SCOOP":
+            scoop_arduino = serial_comm
+            drive_arduino.write("LOCK\n")
+            print "FOUND SCOOP ARDUINO"
+
+    prevtime = rospy.Time.now()
+    if scoop_arduino is not None:
+        while not rospy.is_shutdown():
             serialData = pbar_arduino.readline()
             splitData = serialData.split(',')
 
@@ -105,7 +123,6 @@ def arduino_thread_target():
             except:
                 # print out msg if there is an error parsing a serial msg
                 print 'Cannot parse', splitData
-            
 
 if __name__=='__main__':
     main()
