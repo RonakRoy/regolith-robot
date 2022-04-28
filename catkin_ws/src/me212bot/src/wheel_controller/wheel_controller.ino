@@ -9,6 +9,7 @@
 
 EncoderMeasurement  encoder(26);      // encoder handler class, set the motor type 53 or 26 here
 RobotPose           robotPose;        // robot position and orientation calculation class
+DeltaRobotPose      deltaRobotPose;
 PIController        wheelVelCtrl;     // velocity PI controller class
 SerialComm          serialComm;       // serial communication class
 unsigned long       prevTime = 0;
@@ -41,10 +42,12 @@ void loop() {
         encoder.update(); 
 
         // 2. Update position
-        robotPose.update(encoder.dThetaL, encoder.dThetaR); 
+        // robotPose.update(encoder.dThetaL, encoder.dThetaR);
+        deltaRobotPose.calculate(encoder.dThetaL, encoder.dThetaR);
 
         // 3. Send odometry through serial communication
-        serialComm.send(robotPose); 
+        // serialComm.send(robotPose); 
+        serialComm.send(deltaRobotPose);
         serialComm.receiveSerialData();
 
         // 4. Send the velocity command to wheel velocity controller

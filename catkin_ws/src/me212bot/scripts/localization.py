@@ -6,21 +6,41 @@ import numpy as np
 import threading
 import serial
 import tf.transformations as tfm
+from queue import Queue
 
 from me212bot.msg import WheelCmdVel
 from apriltags.msg import AprilTagDetections
+from geometry_msgs.msg import PoseStamped
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 
 rospy.init_node('localization', anonymous=True)
 lr = tf.TransformListener()
 br = tf.TransformBroadcaster()
+
+odom_queue = Queue()
+apriltag_queue = Queue()
     
 def main():
-    pubFrame(br, pose=[0.18, 0.18, 0, 0, 0, 0], frame_id = '/robot_base', parent_frame_id = '/map')
-    apriltag_sub = rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
+    rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
+    rospy.Subscriber("/odom", PoseStamped, odom_callback, queue_size = 1)
     
+    thread = threading.Thread(target = thread_target)
+    thread.start()
+
     rospy.sleep(1)    
     rospy.spin()
+
+def thread_target():
+    # publish initial transfer (guess)
+    last_time = rospy.Time.now()
+    pubFrame(br, pose=[0.18, 0.18, 0, 0, 0, 0], frame_id = '/robot_base', parent_frame_id = '/map')
+
+    while not rospy.is_shutdown():
+        (trans,rot) = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
+        odom = odom_queue.get()
+
+def odom_callback(msg):
+    odom_queue.put(msg)
 
 ## apriltag msg handling function (Need to modify for Task 2)
 def apriltag_callback(data):
@@ -36,8 +56,6 @@ def apriltag_callback(data):
         if detection.id in [2,7,4,0]:
             x = [corner.x for corner in detection.corners2d]
             y = [corner.y for corner in detection.corners2d]
-
-            # print x, y
 
             # 3000 is the max practical area, but looks pretty good.
             area = -0.5 * ((x[0]*y[1] + x[1]*y[2] + x[2]*y[3] + x[3]*y[0]) - (x[1]*y[0] + x[2]*y[1] + x[3]*y[2] + x[0]*y[3]))
@@ -57,10 +75,7 @@ def apriltag_callback(data):
             areas.append(area)
             poses.append(poselist_base_map)
 
-    # print "Found apriltag ids ", ids
-
     if i_ma != -1:
-        # print "Using apriltag with id ", ids[i_ma]
         pubFrame(br, pose = poses[i_ma], frame_id = '/robot_base', parent_frame_id = '/map')
 
 if __name__=='__main__':

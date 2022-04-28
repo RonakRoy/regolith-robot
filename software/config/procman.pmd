@@ -34,8 +34,8 @@ cmd "6-objectdetection" {
     host = "localhost";
 }
 
-cmd "7-robot" {
-    exec = "rosrun me212bot me212bot_node.py";
+cmd "7-hardware" {
+    exec = "rosrun me212bot hardware.py";
     host = "localhost";
 }
 

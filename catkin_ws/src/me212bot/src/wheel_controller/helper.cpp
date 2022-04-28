@@ -74,6 +74,15 @@ void RobotPose::update(float dThetaL, float dThetaR) {
     pathDistance += sqrt(dX * dX + dY * dY);
 }
 
+void DeltaRobotPose::calculate(float dThetaL, float dThetaR) {
+    // orientation angle theta increment in radians
+    dTh = (r / (2.0 * b)) * (dThetaR - dThetaL);
+        
+    // robot X, Y position increment in meters
+    dX = (r / 2.0) * cos(Th) * (dThetaR + dThetaL); 
+    dY = (r / 2.0) * sin(Th) * (dThetaR + dThetaL);
+}
+
 // PIController Class function implementation (not the focus of this lab)
 void PIController::doPIControl(String side, float desV, float currV) {
     float error = desV - currV;
