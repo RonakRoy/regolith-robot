@@ -10,9 +10,12 @@ import tf.transformations as tfm
 from geometry_msgs.msg import Quaternion
 
 import helper
-from me212bot.msg import WheelCmdVel, DeltaRobotPose
+from me212bot.msg import WheelCmdVel, DeltaRobotPose, PbarPose, ScoopPose
 
 odom_publisher = rospy.Publisher('/delta_robot_pose', DeltaRobotPose, queue_size = 1)
+pbar_publisher = rospy.Publisher('/pbar_pose', PbarPose, queue_size=1)
+scoop_publisher = rospy.Publisher('/scoop_pose', ScoopPose, queue_size=1)
+
 
 ## main function (Need to modify)
 def main():
