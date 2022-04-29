@@ -20,8 +20,6 @@ int motor_speed = 0;
 
 void setup() {
     Serial.begin(115200);
-
-    Serial.println("PBar Driver");
     md.init();
 
     pinMode(2, INPUT_PULLUP);
@@ -32,19 +30,12 @@ void setup() {
     md.enableDrivers();
     md.setM2Speed(0);
 
-    while (true) {
-        Serial.println("PBAR");
-        if (Serial.available() > 0) {
-            String commandString = Serial.readStringUntil('\n');
-            if (commandString.compareTo("LOCK")) break;
-        }
-        delay(100);
-    }
-
     last_time = millis();
 }
 
 void loop() {
+    receiveSerialData();
+
     current_time = millis();
     current_count = encoder_count;
 
@@ -57,14 +48,10 @@ void loop() {
 
     md.setM2Speed(50+motor_speed);
 
-    Serial.print("current: ");
+    Serial.print("PBAR,");
     Serial.print(current_count);
-    Serial.print("; desired: ");
-    Serial.print(desired_count);
-    Serial.print("; speed: ");
-    Serial.println(motor_speed);
+    Serial.println("");
 
-    receiveSerialData();
 }
 
 void receiveSerialData() {

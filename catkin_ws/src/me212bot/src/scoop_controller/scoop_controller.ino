@@ -14,14 +14,6 @@ int wrist_pos = 0;
 
 void setup() {
     Serial.begin(115200);
-    while (true) {
-        Serial.println("SCOOP");
-        if (Serial.available() > 0) {
-            String commandString = Serial.readStringUntil('\n');
-            if (commandString.compareTo("LOCK")) break;
-        }
-        delay(100);
-    }
 
     pinMode(WRIST_STEP, OUTPUT);
     pinMode(WRIST_DIR, OUTPUT);
@@ -52,6 +44,12 @@ void loop() {
 
         jaw_pos += (jaw_pos > desired_jaw_pos) ? -1 : 1;
     }
+
+    Serial.print("SCOOP,");
+    Serial.print(wrist_pos);
+    Serial.print(",");
+    Serial.print(jaw_pos);
+    Serial.println("");
 }
 
 void receiveSerialData() {
