@@ -11,10 +11,7 @@ from Queue import Queue
 from me212bot.msg import WheelCmdVel, DeltaRobotPose
 from apriltags.msg import AprilTagDetections
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
-
-rospy.init_node('localization', anonymous=True)
-lr = tf.TransformListener()
-br = tf.TransformBroadcaster()
+from std_srvs.srv import Trigger, TriggerResponse
 
 odom_queue = Queue()
 apriltag_queue = Queue()
@@ -24,19 +21,40 @@ Y = 0.2
 Th = np.pi/4
 
 LOCALIZATION_FREQ = 500.0
-    
+
+rospy.init_node('localization', anonymous=True)
+lr = tf.TransformListener()
+br = tf.TransformBroadcaster()
+
+def trigger_response(request):
+    global apriltag_queue
+    global april_tagging
+
+    april_tagging = True
+
+    while april_tagging:
+        rospy.sleep(0.001)
+
+    return TriggerResponse(success=True, message="It worked.")
+
+loc_service = rospy.Service('/localize', Trigger, trigger_response)
+
+april_tagging = False
 def main():
-    # rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
+    rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
     odom_sub = rospy.Subscriber("/delta_robot_pose", DeltaRobotPose, odom_callback, queue_size = 1)
     
     thread = threading.Thread(target = thread_target)
     thread.start()
 
-    rospy.sleep(1)    
+    rospy.sleep(1)
     rospy.spin()
 
 def thread_target():
     global odom_queue
+    global apriltag_queue
+    global april_tagging
+
     global X
     global Y
     global Th
@@ -48,22 +66,37 @@ def thread_target():
     r = rospy.Rate(LOCALIZATION_FREQ)
     previous_time = rospy.Time(0)
     current_time = rospy.Time(0)
+
+    april_tag_poses = []
     while not rospy.is_shutdown():
         current_time = rospy.Time.now()
 
-        # if current_time - previous_time < rospy.Duration(1.0/LOCALIZATION_FREQ):
-        #     rospy.sleep(0.001)
-        #     continue
+        if april_tagging:
+            while len(april_tag_poses) < 10:
+                april_tag_poses.append(apriltag_queue.get())
 
-        while not odom_queue.empty():
-            odom = odom_queue.get()
+            avg_pose = np.average(april_tag_poses, axis=0)
+            norm_quat = avg_pose[3:] / np.linalg.norm(avg_pose[3:])
 
-            Th += odom.delta_theta
-            X += odom.distance * np.cos(Th)
-            Y += odom.distance * np.sin(Th)
+            X = avg_pose[0]
+            Y = avg_pose[1]
+            Th = tfm.euler_from_quaternion(norm_quat)[2]
+            
+            april_tag_poses = []
 
-            if odom.header.stamp >= current_time:
-                break
+            april_tagging = False
+            while not apriltag_queue.empty(): apriltag_queue.get()
+            while not odom_queue.empty(): odom_queue.get()
+        else:
+            while not odom_queue.empty():
+                odom = odom_queue.get()
+
+                Th += odom.delta_theta
+                X += odom.distance * np.cos(Th)
+                Y += odom.distance * np.sin(Th)
+
+                if odom.header.stamp >= current_time:
+                    break
 
         pubFrame(br, pose=[X, Y, 0, 0, 0, Th], frame_id = '/robot_base', parent_frame_id = '/map')
         
@@ -71,9 +104,9 @@ def thread_target():
         r.sleep()
 
 def odom_callback(msg):
-    odom_queue.put(msg)
-    # global odom
-    # odom = msg
+    global april_tagging
+    if not april_tagging:
+        odom_queue.put(msg)
 
 ## apriltag msg handling function (Need to modify for Task 2)
 def apriltag_callback(data):
@@ -108,8 +141,10 @@ def apriltag_callback(data):
             areas.append(area)
             poses.append(poselist_base_map)
 
-    if i_ma != -1:
-        pubFrame(br, pose = poses[i_ma], frame_id = '/robot_base', parent_frame_id = '/map')
+    global april_tagging
+    if i_ma != -1 and april_tagging:
+        global apriltag_queue
+        apriltag_queue.put(poses[i_ma])
 
 if __name__=='__main__':
     main()
