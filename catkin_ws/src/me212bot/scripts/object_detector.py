@@ -132,7 +132,7 @@ def rgb_callback(msg):
         global depth_image
 
         ray = np.array(depth_camera_model.projectPixelTo3dRay((x_med, y_bot-10)))
-        point = ray * depth_image[x_med, y_bot-10]
+        point = ray * depth_image[max(0,y_bot-10), x_med]
 
         if not np.isnan(point).any():
             pile_msg = PointCloud()

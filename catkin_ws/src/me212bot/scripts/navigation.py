@@ -22,11 +22,13 @@ br = tf.TransformBroadcaster()
 DRIVE_FWD = 0
 DRIVE_BWD = 1
 TURN_IN_PLACE = 2
-DRIVE_TO_PILE = 3
+LOCATE_PILE = 3
+DRIVE_TO_PILE = 4
 
 TRAJECTORY = [
     [DRIVE_FWD,      1/4.0 * np.pi, 1.15, 1.15],
     [TURN_IN_PLACE, -1/4.0 * np.pi],
+    [LOCATE_PILE],
     [DRIVE_TO_PILE]
     # [1.15, 1.15,  1/4.0 * np.pi, "fwd"],
     # [1.15, 1.15,  3/4.0 * np.pi, "inp"],
@@ -66,6 +68,8 @@ def navi_loop():
     dX = None
     dTh = None
     global pile
+
+    pile_samples = []
     while not rospy.is_shutdown():
         pos, ori = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
 
@@ -73,51 +77,78 @@ def navi_loop():
         Y = pos[1]
         Th = tfm.euler_from_quaternion(ori)[2]
 
-        if traj_cmd[0] != DRIVE_TO_PILE:
-            Thd = traj_cmd[1]
+        if traj_cmd[0] == LOCATE_PILE:
+            wcv.desiredWV_R = 0
+            wcv.desiredWV_L = 0
+                    
+            velcmd_pub.publish(wcv)
 
-            if traj_cmd[0] != TURN_IN_PLACE:
-                Xd  = traj_cmd[2]
-                Yd  = traj_cmd[3]
+            if len(pile_samples) < 100:
+                if pile is not None:
+                    pile_samples.append((pile.x,pile.y))
+            else:
+                pile_med = np.median(pile_samples, axis=0)
+
+                Xd = pile_med[0]
+                Yd = pile_med[1]
+                Thd = Th
+
+                traj_index += 1
+                try:
+                    traj_cmd = TRAJECTORY[traj_index]
+                except:
+                    print 'Reached end of trajectory.'
+                    break
+
         else:
-            if pile is None or (dX is not None and dX <= 1.0):
-                continue
-            Xd = pile.x
-            Yd = pile.y
-            Thd = Th
-            
-        if traj_cmd[0] == TURN_IN_PLACE:
-            pos_delta = np.array([0,0])
-        else:
-            pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
+            if traj_cmd[0] != DRIVE_TO_PILE:
+                Thd = traj_cmd[1]
 
-        if (np.linalg.norm(pos_delta) < 0.1 and np.fabs(diffrad(Th, Thd)) < 0.1) :
-            print 'Arrived at trajectory point', traj_index
-            traj_index += 1
-
-            try:
-                traj_cmd = TRAJECTORY[traj_index]
-            except:
-                print 'Reached end of trajectory.'
-                wcv.desiredWV_R = 0
-                wcv.desiredWV_L = 0
-                        
-                velcmd_pub.publish(wcv)  
-                break
-
-        dX = (-1 if traj_cmd[0] == DRIVE_BWD else 1) * np.linalg.norm(pos_delta)
-        dTh = Thd - Th
-
-        vel_desired = 2.0*dX + 0.75 if traj_cmd[0] != TURN_IN_PLACE else 0
-        angVel_desired = -1.5*dTh
-
-        speed_multiplier = 1.0
-        wcv.desiredWV_L = speed_multiplier*(vel_desired + angVel_desired)
-        wcv.desiredWV_R = speed_multiplier*(vel_desired - angVel_desired)
-
-        print "dX:", dX, "dTh", dTh, "wL:", wcv.desiredWV_L, "wR:", wcv.desiredWV_R
+                if traj_cmd[0] != TURN_IN_PLACE:
+                    Xd  = traj_cmd[2]
+                    Yd  = traj_cmd[3]
                 
-        velcmd_pub.publish(wcv)  
+            if traj_cmd[0] == TURN_IN_PLACE:
+                done = np.fabs(diffrad(Th,Thd) < 0.1)
+
+            else:
+                robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
+                pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
+                heading_err_cross = cross2d( robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
+
+                done = np.linalg.norm(pos_delta) < 0.1 and heading_err_cross < 0.05
+
+            if done:
+                print 'Arrived at trajectory point', traj_index
+                pile_samples = []
+                traj_index += 1
+
+                try:
+                    traj_cmd = TRAJECTORY[traj_index]
+                except:
+                    print 'Reached end of trajectory.'
+                    wcv.desiredWV_R = 0
+                    wcv.desiredWV_L = 0
+                            
+                    velcmd_pub.publish(wcv)  
+                    break
+
+            if traj_cmd[0] == TURN_IN_PLACE:
+                dTh = Thd - Th
+                vel_desired = 0
+                angVel_desired = -1.5*dTh
+            else:
+                dX = (-1 if traj_cmd[0] == DRIVE_BWD else 1) * np.linalg.norm(pos_delta)
+                vel_desired = 2.0*dX + 0.75 if traj_cmd[0] != TURN_IN_PLACE else 0
+                angVel_desired = -1*heading_err_cross
+
+            speed_multiplier = 3.0 if traj_cmd[0] == DRIVE_TO_PILE else 1.0
+            wcv.desiredWV_L = speed_multiplier*(vel_desired + angVel_desired)
+            wcv.desiredWV_R = speed_multiplier*(vel_desired - angVel_desired)
+
+            print "dX:", dX, "dTh", dTh, "wL:", wcv.desiredWV_L, "wR:", wcv.desiredWV_R
+                    
+            velcmd_pub.publish(wcv)  
         
         rate.sleep()
 

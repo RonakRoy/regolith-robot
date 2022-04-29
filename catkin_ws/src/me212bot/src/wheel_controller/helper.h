@@ -44,7 +44,7 @@ class EncoderMeasurement {
     const float rev2enc_26 = 2000;
     const float gearing_26 = 26;
     
-    const float rev2enc_53 = 100;
+    const float rev2enc_53 = 125;
     const float gearing_53 = 53;
     
     const float voltage = 22.2;              // (Volt)
