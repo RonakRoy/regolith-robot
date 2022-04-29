@@ -19,7 +19,15 @@ rospy.init_node('navigation', anonymous=True)
 lr = tf.TransformListener()
 br = tf.TransformBroadcaster()
 
+DRIVE_FWD = 0
+DRIVE_BWD = 1
+TURN_IN_PLACE = 2
+DRIVE_TO_PILE = 3
+
 TRAJECTORY = [
+    [DRIVE_FWD,      1/4.0 * np.pi, 1.15, 1.15],
+    [TURN_IN_PLACE, -1/4.0 * np.pi],
+    [DRIVE_TO_PILE]
     # [1.15, 1.15,  1/4.0 * np.pi, "fwd"],
     # [1.15, 1.15,  3/4.0 * np.pi, "inp"],
     # [0.90, 1.50,  3/4.0 * np.pi, "fwd"]
@@ -48,62 +56,61 @@ def pile_callback(msg):
 ## navigation control loop (No need to modify)
 def navi_loop():
     velcmd_pub = rospy.Publisher("/cmdvel", WheelCmdVel, queue_size = 1)
-    # traj_index = 0
-    # traj_pose = TRAJECTORY[traj_index]
+    traj_index = 0
+    traj_cmd = TRAJECTORY[traj_index]
     
     rate = rospy.Rate(100) # 100hz
     
     wcv = WheelCmdVel()
     
+    global pile
     while not rospy.is_shutdown():
+        pos, ori = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
+
         X = pos[0]
         Y = pos[1]
         Th = tfm.euler_from_quaternion(ori)[2]
+
+        if traj_cmd[0] != DRIVE_TO_PILE:
+            Thd = traj_cmd[1]
+
+            if traj_cmd[0] != TURN_IN_PLACE:
+                Xd  = traj_cmd[2]
+                Yd  = traj_cmd[3]
+        else:
+            if pile is None:
+                continue
+            Xd = pile.x
+            Yd = pile.y
+            Thd = Th
+            
         
-        global pile
-        if pile is None:
-            continue
-
-        pos, ori = lr.lookupTransform(pile.header.frame_id, '/map', pile.header.stamp)
-
-        Xd = pile.x
-        Yd = pile.y
-        Thd = Th
-        # Xd  = traj_pose[0]
-        # Yd  = traj_pose[1]
-        # Thd = traj_pose[2]
-        
-        pos_delta         = np.array([Xd, Yd]) - np.array([X, Y])
-        robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
-
-        # if traj_pose[3] == "inp":
-        #     pos_delta = np.array([0,0])
+        if traj_cmd[0] == TURN_IN_PLACE:
+            pos_delta = np.array([0,0])
+        else:
+            pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
         
         if (np.linalg.norm(pos_delta) < 0.1 and np.fabs(diffrad(Th, Thd)) < 0.1) :
             print 'Arrived at trajectory point', traj_index
             traj_index += 1
 
             try:
-                traj_pose = TRAJECTORY[traj_index]
+                traj_cmd = TRAJECTORY[traj_index]
             except:
+                print 'Reached end of trajectory.'
                 wcv.desiredWV_R = 0
                 wcv.desiredWV_L = 0
                         
                 velcmd_pub.publish(wcv)  
                 break
 
-        dX = np.linalg.norm(pos_delta)
+        dX = (-1 if traj_cmd[0] == DRIVE_BWD else 1) * np.linalg.norm(pos_delta)
         dTh = Thd - Th
 
-        speed_multiplier = 0.2
-
-        vel_desired = 2.0*dX + 0.75
-        # if traj_pose[3] == "inp":
-        #     vel_desired = 0
-        # elif traj_pose[3] == "bwd":
-        #     vel_desired = -vel_desired
+        vel_desired = 2.0*dX + 0.75 if traj_cmd[0] != TURN_IN_PLACE else 0
         angVel_desired = -1.0*dTh
 
+        speed_multiplier = 1.0
         wcv.desiredWV_L = speed_multiplier*(vel_desired + angVel_desired)
         wcv.desiredWV_R = speed_multiplier*(vel_desired - angVel_desired)
 
