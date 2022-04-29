@@ -30,7 +30,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
@@ -67,15 +67,7 @@ Visualization Manager:
           Value: true
         apriltag_ref:
           Value: true
-        camera_depth_frame:
-          Value: true
-        camera_depth_optical_frame:
-          Value: true
         camera_link:
-          Value: true
-        camera_rgb_frame:
-          Value: true
-        camera_rgb_optical_frame:
           Value: true
         map:
           Value: true
@@ -96,15 +88,9 @@ Visualization Manager:
             {}
           apriltag_7:
             {}
-        robot_base:
-          camera_link:
-            apriltag_ref:
-              {}
-            camera_depth_frame:
-              camera_depth_optical_frame:
-                {}
-            camera_rgb_frame:
-              camera_rgb_optical_frame:
+          robot_base:
+            camera_link:
+              apriltag_ref:
                 {}
       Update Interval: 0
       Value: true
@@ -280,7 +266,7 @@ Visualization Manager:
       Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.14040995
+      Yaw: 4.69043064
     Saved: ~
 Window Geometry:
   Blob Detection:
@@ -304,5 +290,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1215
-  X: 69
-  Y: 33
+  X: 877
+  Y: 171

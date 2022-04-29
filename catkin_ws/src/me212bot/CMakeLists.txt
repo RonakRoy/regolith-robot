@@ -19,7 +19,10 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   WheelCmdVel.msg
-  DeltaRobotPose.msg
+  DeltaRobotPose.msg 
+  PbarPose.msg
+  ScoopPose.msg
+
 )
 
 ## Generate services in the 'srv' folder

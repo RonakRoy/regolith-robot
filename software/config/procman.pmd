@@ -15,7 +15,7 @@ cmd "2-rviz" {
 }
 
 cmd "3-kinect" {
-    exec = "roslaunch freenect_launch freenect.launch depth_registration:=true";
+    exec = "roslaunch freenect_launch freenect.launch depth_registration:=true publish_tf:=false";
     host = "localhost";
 }
 

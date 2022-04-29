@@ -89,10 +89,10 @@ def drive_thread_target():
         drive_arduino = comms[drive_port]
 
         while not rospy.is_shutdown():
-            raw_data = drive_arduino.readline().strip()
-            data = raw_data.split(',')
-            
             try:
+                raw_data = drive_arduino.readline().strip()
+                data = raw_data.split(',')
+
                 dist = float(data[1])
                 dth = float(data[2])
                 
@@ -103,6 +103,8 @@ def drive_thread_target():
                 odom.delta_theta = dth
 
                 odom_publisher.publish(odom)
+            except serial.SerialException:
+                print 'No line'
             except:
                 # print out msg if there is an error parsing a serial msg
                 print 'Cannot parse', raw_data

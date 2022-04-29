@@ -1,0 +1,20 @@
+digraph G {
+"map" -> "apriltag_4"[label="Broadcaster: /tf_apriltag_4_map\nAverage rate: 99.443 Hz\nMost recent transform: 1651245706.537 ( -0.008 sec old)\nBuffer length: 4.988 sec\n"];
+"map" -> "apriltag_0"[label="Broadcaster: /tf_apriltag_0_map\nAverage rate: 99.441 Hz\nMost recent transform: 1651245706.537 ( -0.008 sec old)\nBuffer length: 4.988 sec\n"];
+"robot_base" -> "camera_link"[label="Broadcaster: /tf_camera_link_base\nAverage rate: 99.503 Hz\nMost recent transform: 1651245706.537 ( -0.008 sec old)\nBuffer length: 4.985 sec\n"];
+"camera_link" -> "apriltag_ref"[label="Broadcaster: /tf_at_ref_base\nAverage rate: 99.446 Hz\nMost recent transform: 1651245706.537 ( -0.007 sec old)\nBuffer length: 4.978 sec\n"];
+"map" -> "apriltag_7"[label="Broadcaster: /tf_apriltag_7_map\nAverage rate: 99.450 Hz\nMost recent transform: 1651245706.536 ( -0.007 sec old)\nBuffer length: 4.977 sec\n"];
+"map" -> "apriltag_2"[label="Broadcaster: /tf_apriltag_2_map\nAverage rate: 99.443 Hz\nMost recent transform: 1651245706.537 ( -0.008 sec old)\nBuffer length: 4.978 sec\n"];
+"camera_link" -> "camera_depth_frame"[label="Broadcaster: /camera_base_link\nAverage rate: 10.197 Hz\nMost recent transform: 1651245706.597 ( -0.068 sec old)\nBuffer length: 4.904 sec\n"];
+"camera_link" -> "camera_rgb_frame"[label="Broadcaster: /camera_base_link1\nAverage rate: 10.196 Hz\nMost recent transform: 1651245706.598 ( -0.069 sec old)\nBuffer length: 4.904 sec\n"];
+"camera_depth_frame" -> "camera_depth_optical_frame"[label="Broadcaster: /camera_base_link2\nAverage rate: 10.195 Hz\nMost recent transform: 1651245706.601 ( -0.072 sec old)\nBuffer length: 4.904 sec\n"];
+"camera_rgb_frame" -> "camera_rgb_optical_frame"[label="Broadcaster: /camera_base_link3\nAverage rate: 10.195 Hz\nMost recent transform: 1651245706.602 ( -0.073 sec old)\nBuffer length: 4.904 sec\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1651245706.529"[ shape=plaintext ] ;
+ }->"map";
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1651245706.529"[ shape=plaintext ] ;
+ }->"robot_base";
+}

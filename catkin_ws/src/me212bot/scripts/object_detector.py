@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
 import rospy
+import tf
+import tf.transformations as tfm
+
 import numpy as np
 import cv2
 import time
@@ -15,6 +18,8 @@ import message_filters
 import math
 
 rospy.init_node('object_detector', anonymous=True)
+lr = tf.TransformListener()
+
 cv_bridge = CvBridge()
 
 thresh_pub = rospy.Publisher('/object_detector/thresholded', Image, queue_size = 1)
@@ -50,16 +55,16 @@ def depth_callback(msg):
     except CvBridgeError as e:
         print(e)
 
-depth_camera_frame = None
+depth_frame = None
 depth_camera_model = None
 def depth_info_callback(msg):
     global depth_camera_model
-    global depth_camera_frame
+    global depth_frame
     if depth_camera_model is None:
         depth_camera_model = image_geometry.PinholeCameraModel()
         depth_camera_model.fromCameraInfo(msg)
 
-        depth_camera_frame = msg.header.frame_id
+        depth_frame = msg.header.frame_id
 
 def rgb_callback(msg):
     raw_stamp = msg.header.stamp
@@ -96,6 +101,8 @@ def rgb_callback(msg):
 
     # find largest contours
     found, contours, hierarchy = cv2.findContours(opened, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if len(contours) == 0:
+        return
     largest = max(contours, key = cv2.contourArea)
 
     # get points of largest contour
@@ -103,12 +110,12 @@ def rgb_callback(msg):
     cv2.drawContours(cimg, [largest], 0, color=255, thickness=-1)
     pts = np.where(cimg == 255)
 
-    x_med = np.median(pts[1])
+    x_med = int(np.median(pts[1]))
     mask = (pts[1] >= x_med-10) & (pts[1] <= x_med+10)
 
-    y_bot = np.median(np.sort(pts[0][mask])[-50:])
+    y_bot = int(np.median(np.sort(pts[0][mask])[-50:]))
 
-    if color_image != None:
+    if color_image is not None:
         cv2.drawContours(color_image, contours, -1, (0,255,0), 3)
         x,y,w,h = cv2.boundingRect(largest)
 
@@ -124,26 +131,26 @@ def rgb_callback(msg):
     if depth_camera_model is not None:
         global depth_image
 
-        ray = np.array(depth_camera_model.projectPixelTo3dRay((x_med,y_bot)))
-        dist = 0
-        radius = 9
-        for dx in range(-radius,radius+1):
-            for dy in range(-radius,radius+1):
-                dist += depth_image[x_med + dx, y_bot + dy] / 4.0
-        point = ray * dist / (radius*radius)
+        ray = np.array(depth_camera_model.projectPixelTo3dRay((x_med, y_bot-10)))
+        point = ray * depth_image[x_med, y_bot-10]
 
-        print point
+        if not np.isnan(point).any():
+            pile_msg = PointCloud()
+            pile_msg.header.stamp = raw_stamp
+            pile_msg.header.frame_id = '/map'
+            pile_point = Point32()
 
-        pile_msg = PointCloud()
-        pile_msg.header.stamp = raw_stamp
-        pile_msg.header.frame_id = depth_camera_frame
-        pile_point = Point32()
-        pile_point.x = point[0]
-        pile_point.y = point[1]
-        pile_point.z = point[2]
-        pile_msg.points.append(pile_point)
+            pos, ori = lr.lookupTransform('/map', depth_frame, rospy.Time(0))
+            R = tfm.quaternion_matrix(ori)[0:3,0:3]
 
-        pile_pub.publish(pile_msg)
+            point = np.array([pos]).T+R.dot(np.array([point]).T)
+
+            pile_point.x = point[0]
+            pile_point.y = point[1]
+            pile_point.z = point[2]
+            pile_msg.points.append(pile_point)
+
+            pile_pub.publish(pile_msg)
 
 
 if __name__=='__main__':
