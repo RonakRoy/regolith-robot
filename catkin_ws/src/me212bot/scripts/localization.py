@@ -6,11 +6,10 @@ import numpy as np
 import threading
 import serial
 import tf.transformations as tfm
-from queue import Queue
+from Queue import Queue
 
-from me212bot.msg import WheelCmdVel
+from me212bot.msg import WheelCmdVel, DeltaRobotPose
 from apriltags.msg import AprilTagDetections
-from geometry_msgs.msg import PoseStamped
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 
 rospy.init_node('localization', anonymous=True)
@@ -19,10 +18,16 @@ br = tf.TransformBroadcaster()
 
 odom_queue = Queue()
 apriltag_queue = Queue()
+
+X = 0.2
+Y = 0.2
+Th = np.pi/4
+
+LOCALIZATION_FREQ = 500.0
     
 def main():
     # rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
-    rospy.Subscriber("/odom", PoseStamped, odom_callback, queue_size = 1)
+    odom_sub = rospy.Subscriber("/delta_robot_pose", DeltaRobotPose, odom_callback, queue_size = 1)
     
     thread = threading.Thread(target = thread_target)
     thread.start()
@@ -31,22 +36,44 @@ def main():
     rospy.spin()
 
 def thread_target():
-    # publish initial transfer (guess)
-    last_time = rospy.Time.now()
-    pubFrame(br, pose=[0.18, 0.18, 0, 0, 0, 0], frame_id = '/robot_base', parent_frame_id = '/map')
+    global odom_queue
+    global X
+    global Y
+    global Th
 
+    # publish initial transfer (guess)    
+    rospy.sleep(2)
+    pubFrame(br, pose=[X, Y, 0, 0, 0, Th], frame_id = '/robot_base', parent_frame_id = '/map')
+
+    r = rospy.Rate(LOCALIZATION_FREQ)
+    previous_time = rospy.Time(0)
+    current_time = rospy.Time(0)
     while not rospy.is_shutdown():
-        (trans,rot) = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
-        odom = odom_queue.get()
+        current_time = rospy.Time.now()
 
-        rot = tfm.quaternionMultiply(tfm.quaternion_from_euler([0,0,odom.delta_theta]), rot)
-        th = tfm.euler_from_quaternion(rot)[2]
-        trans = np.array(trans) + np.array([odom.distance * np.cos(th), odom.distance * np.sin(th), 0])
+        # if current_time - previous_time < rospy.Duration(1.0/LOCALIZATION_FREQ):
+        #     rospy.sleep(0.001)
+        #     continue
 
-        pubFrame(br, pose = trans.tolist() + list(rot), frame_id = '/robot_base', parent_frame_id = '/map')
+        while not odom_queue.empty():
+            odom = odom_queue.get()
+
+            Th += odom.delta_theta
+            X += odom.distance * np.cos(Th)
+            Y += odom.distance * np.sin(Th)
+
+            if odom.header.stamp >= current_time:
+                break
+
+        pubFrame(br, pose=[X, Y, 0, 0, 0, Th], frame_id = '/robot_base', parent_frame_id = '/map')
+        
+        previous_time = current_time
+        r.sleep()
 
 def odom_callback(msg):
     odom_queue.put(msg)
+    # global odom
+    # odom = msg
 
 ## apriltag msg handling function (Need to modify for Task 2)
 def apriltag_callback(data):

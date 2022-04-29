@@ -19,23 +19,28 @@ cmd "3-kinect" {
     host = "localhost";
 }
 
-cmd "4-apriltag" {
+cmd "4-hardware" {
+    exec = "rosrun me212bot hardware.py";
+    host = "localhost";
+}
+
+cmd "5-apriltag" {
     exec = "roslaunch apriltags apriltags.launch";
     host = "localhost";
 }
 
-cmd "5-localization" {
+cmd "6-localization" {
     exec = "rosrun me212bot localization.py";
     host = "localhost";
 }
 
-cmd "6-objectdetection" {
+cmd "7-objectdetection" {
     exec = "rosrun me212bot object_detector.py";
     host = "localhost";
 }
 
-cmd "7-hardware" {
-    exec = "rosrun me212bot hardware.py";
+cmd "8-navigation" {
+    exec = "rosrun me212bot navigation.py";
     host = "localhost";
 }
 

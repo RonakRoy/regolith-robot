@@ -1,5 +1,4 @@
-#
-/usr/bin/python
+#!/usr/bin/python
 
 # 2.12 Lab 3 AprilTag Navigation: use AprilTag to get current robot (X,Y,Theta) in world frame, and to navigate to target (X,Y,Theta)
 # Peter Yu Sept 2016
@@ -15,126 +14,68 @@ from me212bot.msg import WheelCmdVel
 from apriltags.msg import AprilTagDetections
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 
-
 rospy.init_node('navigation', anonymous=True)
 lr = tf.TransformListener()
 br = tf.TransformBroadcaster()
+
+TRAJECTORY = [
+    [1.15, 1.15,  1/4.0 * np.pi],
+    [1.15, 1.15,  3/4.0 * np.pi],
+    [0.90, 1.50,  3/4.0 * np.pi],
+    [1.15, 1.15,  3/4.0 * np.pi],
+    [1.15, 1.15,  1/4.0 * np.pi],
+    [1.83, 1.83,  1/4.0 * np.pi],
+    [1.83, 1.83,    0.0 * np.pi],
+    [2.80, 1.83,    0.0 * np.pi],
+]
     
 def main():
-    apriltag_sub = rospy.Subscriber("/apriltags/detections", AprilTagDetections, apriltag_callback, queue_size = 1)
-    
     rospy.sleep(1)
     
-    constant_vel = False
-    if constant_vel:
-        thread = threading.Thread(target = constant_vel_loop)
-    else:
-        thread = threading.Thread(target = navi_loop)
+    thread = threading.Thread(target = navi_loop)
     thread.start()
     
     rospy.spin()
-
-## sending constant velocity (Need to modify for Task 1)
-def constant_vel_loop():
-    velcmd_pub = rospy.Publisher('/cmdvel', WheelCmdVel, queue_size = 1)
-    rate = rospy.Rate(100) # 100hz
-    
-    while not rospy.is_shutdown() :
-        wcv = WheelCmdVel()
-        wcv.desiredWV_R = 0.1
-        wcv.desiredWV_L = 0.2
-        
-        velcmd_pub.publish(wcv) 
-        
-        rate.sleep() 
     
 ## navigation control loop (No need to modify)
 def navi_loop():
     velcmd_pub = rospy.Publisher("/cmdvel", WheelCmdVel, queue_size = 1)
-    target_index=0;
-    target_pose2d = TARGET_LIST[target_index] # [0.25, 0, np.pi]
+    traj_index = 0
+    traj_pose = TRAJECTORY[traj_index]
+    
     rate = rospy.Rate(100) # 100hz
     
     wcv = WheelCmdVel()
     
-    arrived = False
-    arrived_position = False
-    
-    while not rospy.is_shutdown() :
-        # 1. get robot pose
-        robot_pose3d = lookupTransform(lr, '/map', '/robot_base')
-        
-        if robot_pose3d is None:
-            print '1. Tag not in view, Stop'
-            wcv.desiredWV_R = 0  # right, left
-            wcv.desiredWV_L = 0
-            velcmd_pub.publish(wcv) 
-            rate.sleep()
-            continue
-        
-        robot_position2d  = robot_pose3d[0:2]
-        target_position2d = target_pose2d[0:2]
-        
-        robot_yaw    = tfm.euler_from_quaternion(robot_pose3d[3:7]) [2]
-        robot_pose2d = robot_position2d + [robot_yaw]
-        
-        # 2. navigation policy
-        # 2.1 if       in the target, stop
-        # 2.2 else if  close to target position, turn to the target orientation
-        # 2.3 else if  in the correct heading, go straight to the target position,
-        # 2.4 else     turn in the direction of the target position
-        
-        pos_delta         = np.array(target_position2d) - np.array(robot_position2d)
-        robot_heading_vec = np.array([np.cos(robot_yaw), np.sin(robot_yaw)])
-        heading_err_cross = cross2d( robot_heading_vec, pos_delta / np.linalg.norm(pos_delta) )
-        
-        # print 'robot_position2d', robot_position2d, 'target_position2d', target_position2d
-        # print 'pos_delta', pos_delta
-        # print 'robot_yaw', robot_yaw
-        # print 'norm delta', np.linalg.norm( pos_delta ), 'diffrad', diffrad(robot_yaw, target_pose2d[2])
-        # print 'heading_err_cross', heading_err_cross
-        
-       
-	# elif np.linalg.norm( pos_delta ) < 0.08:
-        #     arrived_position = True
-        #     if diffrad(robot_yaw, target_pose2d[2]) > 0:
-        #         print 'Case 2.2.1  Turn right slowly'      
-        #         wcv.desiredWV_R = -0.05 
-        #         wcv.desiredWV_L = 0.05
-        #     else:
-        #         print 'Case 2.2.2  Turn left slowly'
-        #         wcv.desiredWV_R = 0.05  
-        #         wcv.desiredWV_L = -0.05
-        # elif arrived_position or np.fabs( heading_err_cross ) < 0.2:
-        #     print 'Case 2.3  Straight forward'  
-        #     wcv.desiredWV_R = 0.1
-        #     wcv.desiredWV_L = 0.1
-        # else:
-        #     if heading_err_cross < 0:
-        #         print 'Case 2.4.1  Turn right'
-        #         wcv.desiredWV_R = -0.1
-        #         wcv.desiredWV_L = 0.1
-        #     else:
-        #         print 'Case 2.4.2  Turn left'
-        #         wcv.desiredWV_R = 0.1
-        #         wcv.desiredWV_L = -0.1
+    while not rospy.is_shutdown():
+        pos, ori = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
 
-        # 2-axis Proportional Control Implementation
+        X = pos[0]
+        Y = pos[1]
+        Th = tfm.euler_from_quaternion(ori)[2]
         
-        if arrived or (np.linalg.norm( pos_delta ) < 0.08 and np.fabs(diffrad(robot_yaw, target_pose2d[2]))<0.05) :
-            print('arrived at point')
+        Xd  = traj_pose[0]
+        Yd  = traj_pose[1]
+        Thd = traj_pose[2]
+        
+        pos_delta         = np.array([Xd, Yd]) - np.array([X, Y])
+        robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
+        
+        if (np.linalg.norm(pos_delta) < 0.08 and np.fabs(diffrad(Th, Thd)) < 0.05) :
+            print 'Arrived at trajectory point', traj_index
             wcv.desiredWV_R = 0  
             wcv.desiredWV_L = 0
-            arrived = True
-	    target_index += 1
-	dX = np.linalg.norm(pos_delta)
-        dTheta = heading_err_cross
-        vel_desired =  -(0.1 - dX)*0.25
-        angVel_desired = (0 - dTheta)*0.25
+
+        dX = np.linalg.norm(pos_delta)
+        dTh = Thd - Th
+
+        print "dX:", dX, "dTh", dTh
+
+        vel_desired = 0.75*dX + .25
+        angVel_desired = -0.50*dTh
+
         wcv.desiredWV_R = vel_desired - angVel_desired
         wcv.desiredWV_L = vel_desired + angVel_desired
-
-
                 
         velcmd_pub.publish(wcv)  
         

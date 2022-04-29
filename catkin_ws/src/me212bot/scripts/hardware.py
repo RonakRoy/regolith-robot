@@ -14,10 +14,53 @@ from me212bot.msg import WheelCmdVel, DeltaRobotPose
 
 odom_publisher = rospy.Publisher('/delta_robot_pose', DeltaRobotPose, queue_size = 1)
 
+comms = []
+try:
+    comms.append(serial.Serial('/dev/ttyACM0', 115200, timeout=5))
+except:
+    pass
+
+try:
+    comms.append(serial.Serial('/dev/ttyACM1', 115200, timeout=5))
+except:
+    pass
+
+try:
+    comms.append(serial.Serial('/dev/ttyACM2', 115200, timeout=5))
+except:
+    pass
+
+drive_port = None
+pbar_port = None
+scoop_port = None
+
 ## main function (Need to modify)
 def main():
     rospy.init_node('me212bot', anonymous=True)
-    
+
+    global drive_port
+    global pbar_port
+    global scoop_port
+    for i in range(len(comms)):
+        for j in range(10):
+            serial_data = comms[i].readline().strip()
+            try:
+                split_data = serial_data.split(',')
+                if split_data[0] == "DRIVE":
+                    print "Found drive arduino."
+                    drive_port = i
+                    break
+                elif split_data[1] == "PBAR":
+                    print "Found pbar arduino."
+                    pbar_port = i
+                    break
+                elif split_data[1] == "SCOOP":
+                    print "Found scoop arduino."
+                    scoop_port = i
+                    break
+            except:
+                pass
+
     drive_thread = threading.Thread(target = drive_thread_target)
     drive_thread.start()
 
@@ -26,7 +69,7 @@ def main():
 
     scoop_thread = threading.Thread(target = scoop_thread_target)
     scoop_thread.start()
-    
+
     ## 1. Initialize a subscriber
     rospy.Subscriber('/cmdvel', WheelCmdVel, cmdvel_callback)
     rospy.spin()
@@ -36,35 +79,19 @@ def main():
 def cmdvel_callback(msg):  
     ## 2. Send msg.desiredWV_R and msg.desiredWV_L to Arduino.
     strCmd = str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n'
-    drive_arduino.write(strCmd)
+    comms[drive_port].write(strCmd)
 
 def drive_thread_target():
-    drive_arduino = None
+    if drive_port is not None:
+        drive_arduino = comms[drive_port]
 
-    for i in range(3):
-        try:
-            serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200)
-            print("Connected.")
-
-            for i in range(10):
-                serial_data = serial_comm.readline()
-                print serial_data
-                if serial_data.strip() == "DRIVE":
-                    drive_arduino = serial_comm
-                    drive_arduino.write("LOCK")
-                    print "FOUND DRIVE ARDUINO"
-                    break   
-        except:
-            pass
-
-    if drive_arduino is not None:
         while not rospy.is_shutdown():
-            serialData = drive_arduino.readline()
-            splitData = serialData.split(',')
+            raw_data = drive_arduino.readline().strip()
+            data = raw_data.split(',')
             
             try:
-                dist = float(splitData[0])
-                dth = float(splitData[1])
+                dist = float(data[1])
+                dth = float(data[2])
                 
                 # publish odometry as Pose msg
                 odom = DeltaRobotPose()
@@ -75,7 +102,7 @@ def drive_thread_target():
                 odom_publisher.publish(odom)
             except:
                 # print out msg if there is an error parsing a serial msg
-                print 'Cannot parse', splitData
+                print 'Cannot parse', raw_data
             
 def pbar_thread_target():
     pbar_arduino = None

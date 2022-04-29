@@ -124,6 +124,7 @@ class SerialComm {
     void send(const DeltaRobotPose& deltaRobotPose) {
         unsigned long current_time = micros();
         if (current_time - prevSerialTime >= SERIAL_PERIOD_MICROS) {
+            Serial.print("DRIVE,");
             Serial.print(deltaRobotPose.dist, 18);
             Serial.print(",");
             Serial.print(deltaRobotPose.dTh, 18);

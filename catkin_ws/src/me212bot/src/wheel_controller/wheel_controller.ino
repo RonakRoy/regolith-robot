@@ -22,15 +22,17 @@ void setup() {
     wheelVelCtrl.init();        // connect with motor
     delay(1e3);                 // delay 1000 ms so the robot doesn't drive off without you
 
-    while (true) {
-        Serial.println("DRIVE");
-        if (Serial.available() > 0) {
-            String commandString = Serial.readStringUntil('\n');
-            commandString.trim();
-            if (commandString.compareTo("LOCK")) break;
-        }
-        delay(100);
-    }
+    // while (true) {
+    //     Serial.println("DRIVE");
+    //     if (Serial.available() > 0) {
+    //         String commandString = Serial.readStringUntil('\n');
+    //         commandString.trim();
+    //         Serial.print('receieved ');
+    //         Serial.println(commandString);
+    //         if (commandString.compareTo("LOCK")) break;
+    //     }
+    //     delay(100);
+    // }
 }
 
 void loop() {
