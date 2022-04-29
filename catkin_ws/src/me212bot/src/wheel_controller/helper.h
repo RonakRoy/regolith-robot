@@ -20,7 +20,7 @@ const float SERIAL_FREQ = 100.0;                   // (Hz)
 const float SERIAL_PERIOD = 1.0 / SERIAL_FREQ;
 const float SERIAL_PERIOD_MICROS = SERIAL_PERIOD * 1e6;
 const float b = 0.225; // (m)
-const float r = 0.079756; // wheel radius (m)
+const float r = 0.04; // wheel radius (m)
 
 class EncoderMeasurement {
   public: 
@@ -44,7 +44,7 @@ class EncoderMeasurement {
     const float rev2enc_26 = 2000;
     const float gearing_26 = 26;
     
-    const float rev2enc_53 = 1000;
+    const float rev2enc_53 = 100;
     const float gearing_53 = 53;
     
     const float voltage = 22.2;              // (Volt)

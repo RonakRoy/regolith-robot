@@ -63,6 +63,8 @@ def navi_loop():
     
     wcv = WheelCmdVel()
     
+    dX = None
+    dTh = None
     global pile
     while not rospy.is_shutdown():
         pos, ori = lr.lookupTransform('/map', '/robot_base', rospy.Time(0))
@@ -78,18 +80,17 @@ def navi_loop():
                 Xd  = traj_cmd[2]
                 Yd  = traj_cmd[3]
         else:
-            if pile is None:
+            if pile is None or (dX is not None and dX <= 1.0):
                 continue
             Xd = pile.x
             Yd = pile.y
             Thd = Th
             
-        
         if traj_cmd[0] == TURN_IN_PLACE:
             pos_delta = np.array([0,0])
         else:
             pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
-        
+
         if (np.linalg.norm(pos_delta) < 0.1 and np.fabs(diffrad(Th, Thd)) < 0.1) :
             print 'Arrived at trajectory point', traj_index
             traj_index += 1
@@ -108,7 +109,7 @@ def navi_loop():
         dTh = Thd - Th
 
         vel_desired = 2.0*dX + 0.75 if traj_cmd[0] != TURN_IN_PLACE else 0
-        angVel_desired = -1.0*dTh
+        angVel_desired = -1.5*dTh
 
         speed_multiplier = 1.0
         wcv.desiredWV_L = speed_multiplier*(vel_desired + angVel_desired)
