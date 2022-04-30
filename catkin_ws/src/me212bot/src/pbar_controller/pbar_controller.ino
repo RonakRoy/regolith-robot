@@ -12,8 +12,8 @@ long current_time, last_time;
 int last_error = 0;
 int error_sum = 0;
 
-float kP = 5.0;
-float kI = 0;
+float kP = 7.5;
+float kI = 0.001;
 float kD = 0.5;
 
 int motor_speed = 0;

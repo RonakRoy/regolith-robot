@@ -22,7 +22,7 @@ add_message_files(
   DeltaRobotPose.msg 
   PbarPose.msg
   ScoopPose.msg
-
+  LocalizationMode.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -1,3 +1,5 @@
+*.bag
+
 # Compiled Object files
 *.slo
 *.lo

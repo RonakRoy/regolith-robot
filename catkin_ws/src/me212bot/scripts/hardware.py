@@ -27,7 +27,7 @@ def main():
     global drive_arduino
     global pbar_arduino
     global scoop_arduino
-    for i in range(len(comms)):
+    for i in range(3):
         serial_comm = None
         try:
             port = '/dev/ttyACM{}'.format(i)
@@ -44,11 +44,11 @@ def main():
                     print "Found drive arduino."
                     drive_arduino = serial_comm
                     break
-                elif split_data[1] == "PBAR":
+                elif split_data[0] == "PBAR":
                     print "Found pbar arduino."
                     pbar_arduino = serial_comm
                     break
-                elif split_data[1] == "SCOOP":
+                elif split_data[0] == "SCOOP":
                     print "Found scoop arduino."
                     scoop_arduino = serial_comm
                     break
@@ -56,18 +56,21 @@ def main():
                 pass
 
     if drive_arduino is not None:
+        print "registering drive"
         drive_thread = threading.Thread(target = drive_thread_target)
         drive_thread.start()
 
         rospy.Subscriber('/hardware/cmd_drive', WheelCmdVel, cmd_drive_callback)
 
     if pbar_arduino is not None:
+        print "registering pbar"
         pbar_thread = threading.Thread(target = pbar_thread_target)
         pbar_thread.start()
 
         rospy.Subscriber('/hardware/cmd_pbar', PbarPose, cmd_pbar_callback)
 
     if scoop_arduino is not None:
+        print "registering scoop"
         scoop_thread = threading.Thread(target = scoop_thread_target)
         scoop_thread.start()
 
@@ -100,7 +103,6 @@ def drive_thread_target():
 
 def cmd_pbar_callback(msg):
     pbar_enc = msg.pbar                  # TODO: Inverse kinematics
-
     pbar_arduino.write("{}\n".format(pbar_enc))
             
 def pbar_thread_target():
@@ -125,7 +127,6 @@ def pbar_thread_target():
 def cmd_scoop_callback(msg):
     wrist_enc = msg.wrist
     jaw_enc = msg.jaw
-
     scoop_arduino.write("{},{}\n".format(wrist_enc, jaw_enc))
 
 def scoop_thread_target():

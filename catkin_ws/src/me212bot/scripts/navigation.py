@@ -11,15 +11,14 @@ import serial
 import tf.transformations as tfm
 
 
-from me212bot.msg import WheelCmdVel
+from me212bot.msg import WheelCmdVel, LocalizationMode, PbarPose, ScoopPose
 from apriltags.msg import AprilTagDetections
 from sensor_msgs.msg import PointCloud
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
+from localization_mode import ODOM_ONLY, APRILTAG_ONLY
 from std_srvs.srv import Trigger, TriggerRequest
 
 rospy.init_node('navigation', anonymous=True)
-rospy.wait_for_service('/localize')
-localize_serv = rospy.ServiceProxy('/localize', Trigger)
 
 lr = tf.TransformListener()
 br = tf.TransformBroadcaster()
@@ -29,27 +28,38 @@ DRIVE_BWD = 1
 TURN_IN_PLACE = 2
 LOCATE_PILE = 3
 DRIVE_TO_PILE = 4
-LOCALIZE = 5
+WAIT = 5
 BLIND = 6
+PBAR_SCOOP = 7
 
 TRAJECTORY = [
-    [DRIVE_FWD,      1.1, 1.1],
-    [TURN_IN_PLACE, -1/4.0 * np.pi],
-    [LOCATE_PILE],
-    [DRIVE_TO_PILE],
-    [LOCALIZE],
-    [BLIND,         -5, -5, 1],
-    [LOCALIZE],
-    [TURN_IN_PLACE,  1/4.0 * np.pi],
-    [DRIVE_FWD,      1.8, 1.8],
-    [LOCALIZE],
+    [DRIVE_FWD,      1.1, 1.1,       ODOM_ONLY],
+    [TURN_IN_PLACE, -1/4.0 * np.pi,  ODOM_ONLY],
+    [LOCATE_PILE,                    ODOM_ONLY],
+    [DRIVE_TO_PILE,                  ODOM_ONLY],
+    [PBAR_SCOOP,     0, 0, 500,      APRILTAG_ONLY],
+    [WAIT,           0.25,           APRILTAG_ONLY],
+    [BLIND,         -5, -5, 1,       APRILTAG_ONLY],
+    [WAIT,           0.25,           APRILTAG_ONLY],
+    [TURN_IN_PLACE,  1/4.0 * np.pi,  ODOM_ONLY],
+    [DRIVE_FWD,      1.8, 1.8,       ODOM_ONLY],
+    [WAIT,           0.25,           APRILTAG_ONLY],
 ]
+
+loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
+
+velcmd_pub = rospy.Publisher("/hardware/cmd_drive", WheelCmdVel, queue_size = 1)
+pbar_pub = rospy.Publisher("/hardware/cmd_pbar", PbarPose, queue_size = 1)
+scoop_pub = rospy.Publisher("/hardware/cmd_scoop", ScoopPose, queue_size = 1)
 
 def main():
     rospy.sleep(1)
 
     pile_point_subscriber = rospy.Subscriber('/object_detector/pile_location', PointCloud, pile_callback)
-    
+
+    rospy.Subscriber('/pbar_pose', PbarPose, pbar_callback)
+    rospy.Subscriber('/scoop_pose', ScoopPose, scoop_callback)
+
     thread = threading.Thread(target = navi_loop)
     thread.start()
     
@@ -59,22 +69,45 @@ pile = None
 def pile_callback(msg):
     global pile
     pile = msg.points[0]
-    
+
+pbar_pos = 0
+def pbar_callback(msg):
+    global pbar_pos
+    pbar_pos = msg.pbar
+
+scoop_wrist_pos = 0
+scoop_jaw_pos = 0
+def scoop_callback(msg):
+    global scoop_wrist_pos
+    scoop_wrist_pos = msg.wrist
+    global scoop_jaw_pos
+    scoop_jaw_pos = msg.jaw
+
 ## navigation control loop (No need to modify)
 def navi_loop():
-    velcmd_pub = rospy.Publisher("/hardware/cmd_drive", WheelCmdVel, queue_size = 1)
-    traj_index = 0
-    traj_cmd = TRAJECTORY[traj_index]
-    
+    print "Starting trajectory navigation thread."
+
     rate = rospy.Rate(100) # 100hz
         
     dX = None
     dTh = None
     global pile
 
+    global pbar_pos
+    global scoop_wrist_pos
+    global scoop_jaw_pos
+
+    traj_index = 0
+    traj_cmd = TRAJECTORY[traj_index]
+
     traj_pt_start_time = rospy.Time.now()
+    loc_mode = LocalizationMode()
+
+    loc_mode.mode = traj_cmd[-1]
+    loc_mod_pub.publish(loc_mode)
 
     pile_samples = []
+
     while not rospy.is_shutdown():
         wcv = WheelCmdVel()
 
@@ -86,7 +119,20 @@ def navi_loop():
         Y = pos[1]
         Th = tfm.euler_from_quaternion(ori)[2]
 
-        if traj_cmd[0] == LOCATE_PILE:
+        if traj_cmd[0] == PBAR_SCOOP:
+            pbar_pose = PbarPose()
+            pbar_pose.pbar = traj_cmd[1]
+            pbar_pub.publish(pbar_pose)
+
+            scoop_pose = ScoopPose()
+            scoop_pose.wrist = traj_cmd[2]
+            scoop_pose.jaw = traj_cmd[3]
+            scoop_pub.publish(scoop_pose)
+
+            if abs(pbar_pos - traj_cmd[1]) > 10 or scoop_wrist_pos != traj_cmd[2] or scoop_jaw_pos != traj_cmd[3]:
+                continue
+
+        elif traj_cmd[0] == LOCATE_PILE:
             if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(0.5):
                 continue
 
@@ -102,12 +148,9 @@ def navi_loop():
 
                 move_on = True
 
-        elif traj_cmd[0] == LOCALIZE:
-            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(0.25):
+        elif traj_cmd[0] == WAIT:
+            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(traj_cmd[1]):
                 continue
-
-            loc_req = TriggerRequest()
-            result = localize_serv(loc_req)
 
             move_on = True
 
@@ -134,7 +177,9 @@ def navi_loop():
                 pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
                 heading_err_cross = cross2d(dir_mult * robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
 
-                done = np.linalg.norm(pos_delta) < 0.1 and abs(heading_err_cross) < 0.1
+                done = np.linalg.norm(pos_delta) < 0.05
+                if done:
+                    print "done"
 
             if traj_cmd[0] == DRIVE_TO_PILE and (rospy.Time.now()-traj_pt_start_time) > rospy.Duration(5):
                 done = True
@@ -147,19 +192,19 @@ def navi_loop():
                 angVel_desired = -1.5*diffrad(Thd, Th)
             else:
                 dX = np.linalg.norm(pos_delta)
-                vel_desired = dir_mult * (2.0*dX + 0.75) if traj_cmd[0] != TURN_IN_PLACE else 0
+                vel_desired = dir_mult * min(2.0, 10.0*dX) if traj_cmd[0] != TURN_IN_PLACE else 0
                 angVel_desired = -1*heading_err_cross
 
             speed_multiplier = 3.0 if traj_cmd[0] == DRIVE_TO_PILE else 1.0
             wcv.desiredWV_L = speed_multiplier*(vel_desired + angVel_desired)
             wcv.desiredWV_R = speed_multiplier*(vel_desired - angVel_desired)
 
-            # print "dX:", dX, "dTh", dTh, "wL:", wcv.desiredWV_L, "wR:", wcv.desiredWV_R
+            # print "dX", dX, "dTh", heading_err_cross, "wL:", wcv.desiredWV_L, "wR:", wcv.desiredWV_R
                     
             velcmd_pub.publish(wcv)
 
         if move_on:
-            print 'Arrived at trajectory point', traj_index
+            print 'Completed trajectory action', traj_index
             traj_index += 1
 
             wcv.desiredWV_R = 0
@@ -169,6 +214,9 @@ def navi_loop():
             try:
                 traj_cmd = TRAJECTORY[traj_index]
                 traj_pt_start_time = rospy.Time.now()
+
+                loc_mode.mode = traj_cmd[-1]
+                loc_mod_pub.publish(loc_mode)
 
                 pile_samples = []
             except:

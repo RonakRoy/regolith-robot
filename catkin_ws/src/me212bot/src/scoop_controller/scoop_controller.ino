@@ -36,7 +36,7 @@ void loop() {
     }
 
     if (jaw_pos != desired_jaw_pos) {
-        digitalWrite(JAW_DIR, (jaw_pos > desired_jaw_pos) ? LOW : HIGH);
+        digitalWrite(JAW_DIR, (jaw_pos > desired_jaw_pos) ? HIGH : LOW);
         digitalWrite(JAW_STEP,HIGH);
         delayMicroseconds(JAW_PULSE_TIME);
         digitalWrite(JAW_STEP,LOW);
