@@ -16,162 +16,138 @@ odom_publisher = rospy.Publisher('/delta_robot_pose', DeltaRobotPose, queue_size
 pbar_publisher = rospy.Publisher('/pbar_pose', PbarPose, queue_size=1)
 scoop_publisher = rospy.Publisher('/scoop_pose', ScoopPose, queue_size=1)
 
-
-comms = []
-try:
-    comms.append(serial.Serial('/dev/ttyACM0', 115200, timeout=5))
-except:
-    pass
-
-try:
-    comms.append(serial.Serial('/dev/ttyACM1', 115200, timeout=5))
-except:
-    pass
-
-try:
-    comms.append(serial.Serial('/dev/ttyACM2', 115200, timeout=5))
-except:
-    pass
-
-drive_port = None
-pbar_port = None
-scoop_port = None
+drive_arduino = None
+pbar_arduino = None
+scoop_arduino = None
 
 ## main function (Need to modify)
 def main():
     rospy.init_node('me212bot', anonymous=True)
 
-    global drive_port
-    global pbar_port
-    global scoop_port
+    global drive_arduino
+    global pbar_arduino
+    global scoop_arduino
     for i in range(len(comms)):
+        serial_comm = None
+        try:
+            port = '/dev/ttyACM{}'.format(i)
+            serial_comm = serial.Serial(port, 115200, timeout=5)
+            print "Connected to", port
+        except:
+            break
+
         for j in range(10):
-            serial_data = comms[i].readline().strip()
             try:
+                serial_data = serial_comm.readline().strip()
                 split_data = serial_data.split(',')
                 if split_data[0] == "DRIVE":
                     print "Found drive arduino."
-                    drive_port = i
+                    drive_arduino = serial_comm
                     break
                 elif split_data[1] == "PBAR":
                     print "Found pbar arduino."
-                    pbar_port = i
+                    pbar_arduino = serial_comm
                     break
                 elif split_data[1] == "SCOOP":
                     print "Found scoop arduino."
-                    scoop_port = i
+                    scoop_arduino = serial_comm
                     break
             except:
                 pass
 
-    drive_thread = threading.Thread(target = drive_thread_target)
-    drive_thread.start()
+    if drive_arduino is not None:
+        drive_thread = threading.Thread(target = drive_thread_target)
+        drive_thread.start()
 
-    pbar_thread = threading.Thread(target = pbar_thread_target)
-    pbar_thread.start()
+        rospy.Subscriber('/hardware/cmd_drive', WheelCmdVel, cmd_drive_callback)
 
-    scoop_thread = threading.Thread(target = scoop_thread_target)
-    scoop_thread.start()
+    if pbar_arduino is not None:
+        pbar_thread = threading.Thread(target = pbar_thread_target)
+        pbar_thread.start()
 
-    ## 1. Initialize a subscriber
-    rospy.Subscriber('/cmdvel', WheelCmdVel, cmdvel_callback)
+        rospy.Subscriber('/hardware/cmd_pbar', PbarPose, cmd_pbar_callback)
+
+    if scoop_arduino is not None:
+        scoop_thread = threading.Thread(target = scoop_thread_target)
+        scoop_thread.start()
+
+        rospy.Subscriber('/hardware/cmd_scoop', ScoopPose, cmd_scoop_callback)
+
     rospy.spin()
 
-
-## msg handling function (Need to modify)
-def cmdvel_callback(msg):  
-    ## 2. Send msg.desiredWV_R and msg.desiredWV_L to Arduino.
-    strCmd = str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n'
-    comms[drive_port].write(strCmd)
+def cmd_drive_callback(msg):  
+    drive_arduino.write(str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n')
 
 def drive_thread_target():
-    if drive_port is not None:
-        drive_arduino = comms[drive_port]
+    while not rospy.is_shutdown():
+        try:
+            raw_data = drive_arduino.readline().strip()
+            data = raw_data.split(',')
 
-        while not rospy.is_shutdown():
-            try:
-                raw_data = drive_arduino.readline().strip()
-                data = raw_data.split(',')
+            dist = float(data[1])
+            dth = float(data[2])
+            
+            odom = DeltaRobotPose()
+            odom.header.stamp = rospy.Time.now()
+            odom.distance = dist
+            odom.delta_theta = dth
 
-                dist = float(data[1])
-                dth = float(data[2])
-                
-                # publish odometry as Pose msg
-                odom = DeltaRobotPose()
-                odom.header.stamp = rospy.Time.now()
-                odom.distance = dist
-                odom.delta_theta = dth
+            odom_publisher.publish(odom)
+        except serial.SerialException:
+            print 'DRIVE: No serial data on read.'
+        except:
+            print 'DRIVE: Cannot parse \"{}\"'.format(raw_data)
 
-                odom_publisher.publish(odom)
-            except serial.SerialException:
-                print 'No line'
-            except:
-                # print out msg if there is an error parsing a serial msg
-                print 'Cannot parse', raw_data
+def cmd_pbar_callback(msg):
+    pbar_enc = msg.pbar                  # TODO: Inverse kinematics
+
+    pbar_arduino.write("{}\n".format(pbar_enc))
             
 def pbar_thread_target():
-    pbar_arduino = None
-
-    for i in range(3):
+    while not rospy.is_shutdown():
         try:
-            serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200)
+            raw_data = pbar_arduino.readline().strip()
+            data = raw_data.split(',')
 
-            serial_data = serial_comm.readline()
-            if serial_data == "PBAR\n":
-                pbar_arduino = serial_comm
-                drive_arduino.write("LOCK\n")
-                print "FOUND PBAR ARDUINO"
+            pbar_enc = float(data[1])
+
+            pbar_angle = pbar_enc        # TODO: Forward kinematics
+
+            pbar = PbarPose()
+            pbar.pbar = pbar_angle
+
+            pbar_publisher.publish(pbar)
+        except serial.SerialException:
+            print 'PBAR: No serial data on read.'
         except:
-            pass
+            print 'PBAR: Cannot parse \"{}\"'.format(raw_data)
 
-    prevtime = rospy.Time.now()
-    if pbar_arduino is not None:
-        while not rospy.is_shutdown():
-            serialData = pbar_arduino.readline()
+def cmd_scoop_callback(msg):
+    wrist_enc = msg.wrist
+    jaw_enc = msg.jaw
 
-            try: 
-                pbar_angle = float(splitData[0])
-		pbar = PbarPose()
-		pbar.pbar = pbar_angle
-		pbar_publisher.publish(pbar)
-                print 'pbar=', pbar_angle
-            except:
-                print 'Cannot parse', splitData
-
+    scoop_arduino.write("{},{}\n".format(wrist_enc, jaw_enc))
 
 def scoop_thread_target():
-    scoop_arduino = None
-
-    for i in range(3):
+    while not rospy.is_shutdown():
         try:
-            serial_comm = serial.Serial('/dev/ttyACM{}'.format(i), 115200, timeout = 5)
+            raw_data = scoop_arduino.readline().strip()
+            data = raw_data.split(',')
 
-            serial_data = serial_comm.readline()
-            if serial_data == "SCOOP":
-                scoop_arduino = serial_comm
-                drive_arduino.write("LOCK\n")
-                print "FOUND SCOOP ARDUINO"
+            wrist_enc = float(data[1])   # TODO: Forward kinematics
+            jaw_enc = float(data[2])     # TODO: Forward kinematics
+
+            wrist_angle = wrist_enc
+            jaw_angle = jaw_enc
+
+            scoop = ScoopPose()
+            scoop.wrist = wrist_angle
+            scoop.jaw = jaw_angle
+            scoop_publisher.publish(scoop)                
+        except serial.SerialException:
+            print 'SCOOP: No serial data on read.'
         except:
-            pass
-
-    prevtime = rospy.Time.now()
-    if scoop_arduino is not None:
-        while not rospy.is_shutdown():
-            serialData = pbar_arduino.readline()
-            splitData = serialData.split(',')
-
-            try:
-                wrist = float(splitData[0])
-                jaw = float(splitData[1])
-		scoop = ScoopPose()
-		scoop.wrist = wrist
-		scoop.jaw = jaw
-		scoop_publisher.publish(scoop)                
-                print 'wrist=', wrist, ' jaw=', jaw
-
-            except:
-                # print out msg if there is an error parsing a serial msg
-                print 'Cannot parse', splitData
+            print 'SCOOP: Cannot parse \"{}\"'.format(raw_data)
 
 if __name__=='__main__':
     main()
