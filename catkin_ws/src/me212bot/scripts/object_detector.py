@@ -73,6 +73,11 @@ def rgb_callback(msg):
     except CvBridgeError as e:
         print(e)
 
+    global depth_camera_model
+    if depth_camera_model is None: return
+
+    global depth_image
+
     # convert to HSV
     hsv_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2HSV)
 
@@ -83,8 +88,13 @@ def rgb_callback(msg):
     # threshold
     mask_HSV = cv2.inRange(hsv_image, lower_bound_HSV, upper_bound_HSV)
 
+    # mask pixels corresponding to depth points too far away
+    mask_dist = cv2.inRange(depth_image, 0, rospy.get_param("/dh", 3.5))
+
+    mask = cv2.bitwise_and(mask_HSV, mask_dist)
+
     # get display image
-    disp_image_HSV = cv2.bitwise_and(cv_image, cv_image, mask=mask_HSV)
+    disp_image_HSV = cv2.bitwise_and(cv_image, cv_image, mask=mask)
 
     thresh_img_msg = cv_bridge.cv2_to_imgmsg(disp_image_HSV, "bgr8")
     thresh_img_msg.header.stamp = rospy.Time.now()
@@ -93,7 +103,7 @@ def rgb_callback(msg):
     kernel = np.ones((5,5),np.uint8)
 
     # open
-    opened = cv2.morphologyEx(mask_HSV, cv2.MORPH_OPEN, kernel, iterations = 3)
+    opened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations = 3)
 
     open_img_msg = cv_bridge.cv2_to_imgmsg(opened)
     open_img_msg.header.stamp = rospy.Time.now()
@@ -127,9 +137,7 @@ def rgb_callback(msg):
         blob_img_msg.header.stamp = rospy.Time.now()
         blob_pub.publish(blob_img_msg)
 
-    global depth_camera_model
-    if depth_camera_model is not None:
-        global depth_image
+
 
         ray = np.array(depth_camera_model.projectPixelTo3dRay((x_med, y_bot-10)))
         point = ray * depth_image[max(0,y_bot-10), x_med]
