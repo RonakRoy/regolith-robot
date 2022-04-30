@@ -25,7 +25,7 @@ br = tf.TransformBroadcaster()
 
 DRIVE_FWD = 0
 DRIVE_BWD = 1
-TURN_IN_PLACE = 2
+TURN_TO_FACE = 2
 LOCATE_PILE = 3
 DRIVE_TO_PILE = 4
 WAIT = 5
@@ -34,16 +34,18 @@ PBAR_SCOOP = 7
 
 TRAJECTORY = [
     [DRIVE_FWD,      1.1, 1.1,       ODOM_ONLY],
-    [TURN_IN_PLACE, -1/4.0 * np.pi,  ODOM_ONLY],
+    [TURN_TO_FACE,   1.8, 0.6,       ODOM_ONLY],
     [LOCATE_PILE,                    ODOM_ONLY],
     [DRIVE_TO_PILE,                  ODOM_ONLY],
-    [PBAR_SCOOP,     0, 0, 500,      APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1000, 1500,  APRILTAG_ONLY],
+    [BLIND,         -2.5, -2.5, 4,   ODOM_ONLY],
+    [WAIT,           0.25,           ODOM_ONLY],
     [WAIT,           0.25,           APRILTAG_ONLY],
-    [BLIND,         -5, -5, 1,       APRILTAG_ONLY],
+    [TURN_TO_FACE,   1.8, 1,         ODOM_ONLY],
+    [TURN_TO_FACE,   1.6, 1.8,       ODOM_ONLY],
+    [DRIVE_FWD,      1.6, 1.6,           ODOM_ONLY],
     [WAIT,           0.25,           APRILTAG_ONLY],
-    [TURN_IN_PLACE,  1/4.0 * np.pi,  ODOM_ONLY],
-    [DRIVE_FWD,      1.8, 1.8,       ODOM_ONLY],
-    [WAIT,           0.25,           APRILTAG_ONLY],
+    [TURN_TO_FACE,   2.4, 1.8,       ODOM_ONLY],
 ]
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
@@ -57,8 +59,8 @@ def main():
 
     pile_point_subscriber = rospy.Subscriber('/object_detector/pile_location', PointCloud, pile_callback)
 
-    rospy.Subscriber('/pbar_pose', PbarPose, pbar_callback)
-    rospy.Subscriber('/scoop_pose', ScoopPose, scoop_callback)
+    pbar_sub = rospy.Subscriber('/pbar_pose', PbarPose, pbar_callback)
+    scoop_sub = rospy.Subscriber('/scoop_pose', ScoopPose, scoop_callback)
 
     thread = threading.Thread(target = navi_loop)
     thread.start()
@@ -132,8 +134,10 @@ def navi_loop():
             if abs(pbar_pos - traj_cmd[1]) > 10 or scoop_wrist_pos != traj_cmd[2] or scoop_jaw_pos != traj_cmd[3]:
                 continue
 
+            move_on = True
+
         elif traj_cmd[0] == LOCATE_PILE:
-            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(0.5):
+            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(1.5):
                 continue
 
             if len(pile_samples) < 100:
@@ -164,22 +168,20 @@ def navi_loop():
                 move_on = True
             
         else:
-            if traj_cmd[0] == TURN_IN_PLACE:
-                Thd = traj_cmd[1]
-                done = np.fabs(diffrad(Th,Thd) < 0.1)
-            else:
+            if traj_cmd[0] != DRIVE_TO_PILE:
                 Xd = traj_cmd[1]
                 Yd = traj_cmd[2]
-                
-                dir_mult = -1 if traj_cmd[0] == DRIVE_BWD else 1
+            
+            dir_mult = -1 if traj_cmd[0] == DRIVE_BWD else 1
 
-                robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
-                pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
-                heading_err_cross = cross2d(dir_mult * robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
+            robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
+            pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
+            heading_err_cross = cross2d(dir_mult * robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
 
+            if traj_cmd[0] == TURN_TO_FACE:
+                done = np.fabs(heading_err_cross) < 0.05
+            else:
                 done = np.linalg.norm(pos_delta) < 0.05
-                if done:
-                    print "done"
 
             if traj_cmd[0] == DRIVE_TO_PILE and (rospy.Time.now()-traj_pt_start_time) > rospy.Duration(5):
                 done = True
@@ -187,17 +189,19 @@ def navi_loop():
             if done:
                 move_on = True
 
-            if traj_cmd[0] == TURN_IN_PLACE:
+            dX = np.linalg.norm(pos_delta)
+            if traj_cmd[0] == TURN_TO_FACE:
                 vel_desired = 0
-                angVel_desired = -1.5*diffrad(Thd, Th)
+                angVel_desired = -np.sign(heading_err_cross)
             else:
-                dX = np.linalg.norm(pos_delta)
-                vel_desired = dir_mult * min(2.0, 10.0*dX) if traj_cmd[0] != TURN_IN_PLACE else 0
-                angVel_desired = -1*heading_err_cross
+                if traj_cmd[0] == DRIVE_TO_PILE:
+                    vel_desired = 5
+                else:
+                    vel_desired = dir_mult * min(2.0, 10.0*dX)
+                angVel_desired = -heading_err_cross
 
-            speed_multiplier = 3.0 if traj_cmd[0] == DRIVE_TO_PILE else 1.0
-            wcv.desiredWV_L = speed_multiplier*(vel_desired + angVel_desired)
-            wcv.desiredWV_R = speed_multiplier*(vel_desired - angVel_desired)
+            wcv.desiredWV_L = (vel_desired + angVel_desired)
+            wcv.desiredWV_R = (vel_desired - angVel_desired)
 
             # print "dX", dX, "dTh", heading_err_cross, "wL:", wcv.desiredWV_L, "wR:", wcv.desiredWV_R
                     

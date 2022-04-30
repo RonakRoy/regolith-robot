@@ -60,25 +60,23 @@ def main():
         drive_thread = threading.Thread(target = drive_thread_target)
         drive_thread.start()
 
-        rospy.Subscriber('/hardware/cmd_drive', WheelCmdVel, cmd_drive_callback)
-
     if pbar_arduino is not None:
         print "registering pbar"
         pbar_thread = threading.Thread(target = pbar_thread_target)
         pbar_thread.start()
-
-        rospy.Subscriber('/hardware/cmd_pbar', PbarPose, cmd_pbar_callback)
 
     if scoop_arduino is not None:
         print "registering scoop"
         scoop_thread = threading.Thread(target = scoop_thread_target)
         scoop_thread.start()
 
-        rospy.Subscriber('/hardware/cmd_scoop', ScoopPose, cmd_scoop_callback)
+    drive_cmd_sub = rospy.Subscriber('/hardware/cmd_drive', WheelCmdVel, cmd_drive_callback)
+    pbar_cmd_sub = rospy.Subscriber('/hardware/cmd_pbar', PbarPose, cmd_pbar_callback)
+    scoop_cmd_sub = rospy.Subscriber('/hardware/cmd_scoop', ScoopPose, cmd_scoop_callback)
 
     rospy.spin()
 
-def cmd_drive_callback(msg):  
+def cmd_drive_callback(msg):
     drive_arduino.write(str(msg.desiredWV_R) + ',' + str(msg.desiredWV_L) + '\n')
 
 def drive_thread_target():
@@ -101,9 +99,14 @@ def drive_thread_target():
         except:
             print 'DRIVE: Cannot parse \"{}\"'.format(raw_data)
 
+pbar_d = 0
 def cmd_pbar_callback(msg):
+    global pbar_d
     pbar_enc = msg.pbar                  # TODO: Inverse kinematics
-    pbar_arduino.write("{}\n".format(pbar_enc))
+
+    if pbar_d != pbar_enc:
+        pbar_arduino.write("{}\n".format(pbar_enc))
+        pbar_d = pbar_enc
             
 def pbar_thread_target():
     while not rospy.is_shutdown():
@@ -124,10 +127,20 @@ def pbar_thread_target():
         except:
             print 'PBAR: Cannot parse \"{}\"'.format(raw_data)
 
+wrist_d = 0
+jaw_d = 0
 def cmd_scoop_callback(msg):
+    global wrist_d
+    global jaw_d
+
     wrist_enc = msg.wrist
     jaw_enc = msg.jaw
-    scoop_arduino.write("{},{}\n".format(wrist_enc, jaw_enc))
+
+    if wrist_d != wrist_enc or jaw_d != jaw_enc:
+        scoop_arduino.write("{},{}\n".format(wrist_enc, jaw_enc))
+
+        wrist_d = wrist_enc
+        jaw_d = jaw_enc
 
 def scoop_thread_target():
     while not rospy.is_shutdown():

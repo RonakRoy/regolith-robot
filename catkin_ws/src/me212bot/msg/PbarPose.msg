@@ -1,2 +1,2 @@
 Header header
-float64 pbar
+int32 pbar

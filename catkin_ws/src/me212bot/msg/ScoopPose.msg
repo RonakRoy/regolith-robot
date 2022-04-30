@@ -1,3 +1,3 @@
 Header header
-float64 wrist
-float64 jaw
+int32 wrist
+int32 jaw

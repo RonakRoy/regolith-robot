@@ -79,12 +79,15 @@ def thread_target():
             while not apriltag_queue.empty():
                 april_tag_poses.append(apriltag_queue.get())
 
-            avg_pose = np.average(april_tag_poses, axis=0)
-            norm_quat = avg_pose[3:] / np.linalg.norm(avg_pose[3:])
+            try:
+                avg_pose = np.average(april_tag_poses, axis=0)
+                norm_quat = avg_pose[3:] / np.linalg.norm(avg_pose[3:])
 
-            X = avg_pose[0]
-            Y = avg_pose[1]
-            Th = tfm.euler_from_quaternion(norm_quat)[2]
+                X = avg_pose[0]
+                Y = avg_pose[1]
+                Th = tfm.euler_from_quaternion(norm_quat)[2]
+            except:
+                print "Could not AprilTag"
             
         pubFrame(br, pose=[X, Y, 0, 0, 0, Th], frame_id = '/robot_base', parent_frame_id = '/map')
         
