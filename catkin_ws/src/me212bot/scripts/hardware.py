@@ -13,8 +13,8 @@ import helper
 from me212bot.msg import WheelCmdVel, DeltaRobotPose, PbarPose, ScoopPose
 
 odom_publisher = rospy.Publisher('/delta_robot_pose', DeltaRobotPose, queue_size = 1)
-pbar_publisher = rospy.Publisher('/pbar_pose', PbarPose, queue_size=1)
-scoop_publisher = rospy.Publisher('/scoop_pose', ScoopPose, queue_size=1)
+pbar_publisher = rospy.Publisher('/hardware/pose/pbar', PbarPose, queue_size=1)
+scoop_publisher = rospy.Publisher('/hardware/pose/scoop', ScoopPose, queue_size=1)
 
 drive_arduino = None
 pbar_arduino = None
@@ -72,9 +72,9 @@ def main():
         scoop_thread = threading.Thread(target = scoop_thread_target)
         scoop_thread.start()
 
-    drive_cmd_sub = rospy.Subscriber('/hardware/cmd_drive', WheelCmdVel, cmd_drive_callback)
-    pbar_cmd_sub = rospy.Subscriber('/hardware/cmd_pbar', PbarPose, cmd_pbar_callback)
-    scoop_cmd_sub = rospy.Subscriber('/hardware/cmd_scoop', ScoopPose, cmd_scoop_callback)
+    drive_cmd_sub = rospy.Subscriber('/cmd/drive', WheelCmdVel, cmd_drive_callback)
+    pbar_cmd_sub = rospy.Subscriber('/cmd/pbar', PbarPose, cmd_pbar_callback)
+    scoop_cmd_sub = rospy.Subscriber('/cmd/scoop', ScoopPose, cmd_scoop_callback)
 
     rospy.spin()
 

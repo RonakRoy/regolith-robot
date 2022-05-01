@@ -39,34 +39,36 @@ corner_face_x_pile = [TURN_TO_FACE,   1.6, 1.0,         ODOM_ONLY]
 corner_face_y_pile = [TURN_TO_FACE,   1.0, 1.6,         ODOM_ONLY]
 
 TRAJECTORY = [
+#   [CMD_NAME,       CMD_PARAMS,     T,   LOC_MODE],
+
     # Drive to middle
-    [DRIVE_FWD,      1.1, 1.1,       ODOM_ONLY],
+    [DRIVE_FWD,      1.1, 1.1,        -1,   ODOM_ONLY],
     face_y_pile,
 
     # Pile in-n-out
-    [LOCATE_PILE,                    ODOM_ONLY],
-    [DRIVE_TO_PILE,                  ODOM_ONLY],
-    [PBAR_SCOOP,     0, 0, 1500,     ODOM_ONLY],
-    [BLIND,         -2.5, -2.5, 3,   ODOM_ONLY],
-    [PBAR_SCOOP,     0, 1300, 2800,  ODOM_ONLY],
-    [WAIT,           0.5,            APRILTAG_ONLY],
+    [LOCATE_PILE,                      2.0, ODOM_ONLY],
+    [DRIVE_TO_PILE,                    5.0, ODOM_ONLY],
+    [PBAR_SCOOP,     0, 0, 1500,      -1,   ODOM_ONLY],
+    [BLIND,         -2.5, -2.5,        3.0, ODOM_ONLY],
+    [PBAR_SCOOP,     0, 1300, 2800,   -1,   ODOM_ONLY],
+    [WAIT,                             0.5,   APRILTAG_ONLY],
 
     # Go to box and deposit
     corner_face_y_pile,
-    [TURN_TO_FACE,   1.6, 1.6,       ODOM_ONLY],
-    [DRIVE_FWD,      1.4, 1.4,       ODOM_ONLY],
-    [WAIT,           0.25,           APRILTAG_ONLY],
-    [DRIVE_FWD,      1.8, 1.8,       ODOM_ONLY],
-    [WAIT,           0.25,           APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.4, 2.0,       ODOM_ONLY],
-    [WAIT,           0.5,            APRILTAG_ONLY],
-    [DRIVE_FWD,      2.4, 2.0,       ODOM_ONLY],
-    [TURN_TO_FACE,   2.8, 2.0,       ODOM_ONLY],
-    [BLIND,          1.0, 1.0, 3,    APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1300, 900,   APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, -600, -1000, APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, -200, -1600, APRILTAG_ONLY],
-    [WAIT,           1.5,            APRILTAG_ONLY],
+    [TURN_TO_FACE,   1.6, 1.6,        -1,   ODOM_ONLY],
+    [DRIVE_FWD,      1.4, 1.4,        -1,   ODOM_ONLY],
+    [WAIT,                             0.3, APRILTAG_ONLY],
+    [DRIVE_FWD,      1.8, 1.8,        -1,   ODOM_ONLY],
+    [WAIT,                             0.3, APRILTAG_ONLY],
+    [TURN_TO_FACE,   2.4, 2.0,        -1,   ODOM_ONLY],
+    [WAIT,                             0.5, APRILTAG_ONLY],
+    [DRIVE_FWD,      2.4, 2.0,        -1,   ODOM_ONLY],
+    [TURN_TO_FACE,   2.8, 2.0,        -1,   ODOM_ONLY],
+    [BLIND,          1.0, 1.0,         3.0, APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1300, 900,    -1,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, -600, -1000,  -1,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, -200, -1600,  -1,   APRILTAG_ONLY],
+    [WAIT,                             1.5, APRILTAG_ONLY],
 
     # Back out to middle
     [PBAR_SCOOP,     0, 1300, 1300,  APRILTAG_ONLY],
@@ -77,17 +79,17 @@ TRAJECTORY = [
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
 
-velcmd_pub = rospy.Publisher("/hardware/cmd_drive", WheelCmdVel, queue_size = 1)
-pbar_pub = rospy.Publisher("/hardware/cmd_pbar", PbarPose, queue_size = 1)
-scoop_pub = rospy.Publisher("/hardware/cmd_scoop", ScoopPose, queue_size = 1)
+velcmd_pub = rospy.Publisher("/cmd/drive", WheelCmdVel, queue_size = 1)
+pbar_pub = rospy.Publisher("/cmd/pbar", PbarPose, queue_size = 1)
+scoop_pub = rospy.Publisher("/cmd/scoop", ScoopPose, queue_size = 1)
 
 def main():
     rospy.sleep(1)
 
     pile_point_subscriber = rospy.Subscriber('/object_detector/pile_location', PointCloud, pile_callback)
 
-    pbar_sub = rospy.Subscriber('/pbar_pose', PbarPose, pbar_callback)
-    scoop_sub = rospy.Subscriber('/scoop_pose', ScoopPose, scoop_callback)
+    pbar_sub = rospy.Subscriber('/hardware/pose/pbar', PbarPose, pbar_callback)
+    scoop_sub = rospy.Subscriber('/hardware/pose/scoop', ScoopPose, scoop_callback)
 
     thread = threading.Thread(target = navi_loop)
     thread.start()
@@ -149,6 +151,9 @@ def navi_loop():
         Y = pos[1]
         Th = tfm.euler_from_quaternion(ori)[2]
 
+        if traj_cmd[-2] > 0 and (rospy.Time.now()-traj_pt_start_time) >= rospy.Duration(traj_cmd[-2]):
+            move_on = True
+
         if traj_cmd[0] == PBAR_SCOOP:
             if np.abs(traj_cmd[1] - pbar_target) > 2.0:
                 pbar_target += 0.50 * np.sign(traj_cmd[1] - pbar_pos)
@@ -168,9 +173,6 @@ def navi_loop():
             move_on = True
 
         elif traj_cmd[0] == LOCATE_PILE:
-            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(2):
-                continue
-
             if len(pile_samples) < 100:
                 if pile is not None:
                     pile_samples.append((pile.x,pile.y))
@@ -183,19 +185,13 @@ def navi_loop():
                 move_on = True
 
         elif traj_cmd[0] == WAIT:
-            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(traj_cmd[1]):
-                continue
-
-            move_on = True
+            pass
 
         elif traj_cmd[0] == BLIND:
             wcv.desiredWV_R = traj_cmd[2]
             wcv.desiredWV_L = traj_cmd[1]
                     
             velcmd_pub.publish(wcv)
-
-            if (rospy.Time.now()-traj_pt_start_time) >= rospy.Duration(traj_cmd[3]):
-                move_on = True
             
         else:
             if traj_cmd[0] != DRIVE_TO_PILE:
@@ -212,9 +208,6 @@ def navi_loop():
                 move_on = np.fabs(heading_err_cross) < 0.05
             else:
                 move_on = np.linalg.norm(pos_delta) < 0.05
-
-            if traj_cmd[0] == DRIVE_TO_PILE and (rospy.Time.now()-traj_pt_start_time) > rospy.Duration(5):
-                move_on = True
 
             dX = np.linalg.norm(pos_delta)
             if traj_cmd[0] == TURN_TO_FACE:
