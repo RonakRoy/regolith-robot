@@ -31,11 +31,6 @@ void EncoderMeasurement::update() {
     float dphi1 = (dEncoder1 * rad_per_tick);
     float dphi2 = (dEncoder2 * rad_per_tick);
 
-    Serial.print(dphi1);
-    Serial.print(",");
-    Serial.print(dphi2);
-    Serial.println("");
-    
     //for encoder index and motor position switching (Right is 1, Left is 2)
     dThetaR = dphi1;
     dThetaL = dphi2;
@@ -54,28 +49,16 @@ void EncoderMeasurement::update() {
 }
 
 //RobotPose Class function implementation
-void RobotPose::update(float dThetaL, float dThetaR) {
-    // orientation angle theta increment in radians
-    float dTh = (r / (2.0 * b)) * (dThetaR - dThetaL);
-    
-    Th += dTh;
-    
-    // robot X, Y position increment in meters
-    float dX = (r / 2.0) * cos(Th) * (dThetaR + dThetaL); 
-    float dY = (r / 2.0) * sin(Th) * (dThetaR + dThetaL);
-    
-    X += dX;
-    Y += dY;
-    
-    pathDistance += sqrt(dX * dX + dY * dY);
+void RobotPose::reset() {
+    X = 0;
+    Y = 0;
+    Th = 0;
 }
 
-void DeltaRobotPose::calculate(float dThetaL, float dThetaR) {
-    // robot distance traveled in meters
-    dist = (r / 2.0) * (dThetaR + dThetaL); 
-
-    // orientation angle theta increment in radians
-    dTh = (r / (2.0 * b)) * (dThetaR - dThetaL);
+void RobotPose::update(float dThetaL, float dThetaR) {
+    Th += (r / (2.0 * b)) * (dThetaR - dThetaL);
+    X += (r / 2.0) * cos(Th) * (dThetaR + dThetaL);
+    Y += (r / 2.0) * sin(Th) * (dThetaR + dThetaL);
 }
 
 // PIController Class function implementation (not the focus of this lab)

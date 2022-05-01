@@ -227,10 +227,8 @@ def navi_loop():
                     vel_desired = dir_mult * min(2.0, 10.0*dX)
                 angVel_desired = -dir_mult * heading_err_cross
 
-            wcv.desiredWV_L = (vel_desired + angVel_desired)
-            wcv.desiredWV_R = (vel_desired - angVel_desired)
-
-            # print "dX", dX, "dTh", heading_err_cross, "wL:", wcv.desiredWV_L, "wR:", wcv.desiredWV_R
+            wcv.desiredWV_L = 0.25*(vel_desired + angVel_desired)
+            wcv.desiredWV_R = 0.25*(vel_desired - angVel_desired)
                     
             velcmd_pub.publish(wcv)
 
