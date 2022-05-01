@@ -29,7 +29,7 @@ class EncoderMeasurement {
     float dThetaL, dThetaR;
     float maxMV;
     
-    EncoderMeasurement(int motor_type);                // motor_type: 26 or 53
+    EncoderMeasurement();                
     
     void init() {
         initEncoders();         // initialize Encoders
@@ -41,19 +41,15 @@ class EncoderMeasurement {
   private:
     const float wheelRadius = r;   // (meter)
     
-    const float rev2enc_26 = 2000;
-    const float gearing_26 = 26;
-    
-    const float rev2enc_53 = 125;
-    const float gearing_53 = 53;
+    const float tick_per_rot = 1000;
+    const float gearing = 53;
     
     const float voltage = 22.2;              // (Volt)
     const float motor_const = 26.94;         // (rad/s/Volt)
     
-    float enc2rev;
-    float enc2rad;
-    float enc2wheel;
-
+    float rot_per_tick;
+    float rad_per_tick;
+    float met_per_tick;
 };
 
 class RobotPose {

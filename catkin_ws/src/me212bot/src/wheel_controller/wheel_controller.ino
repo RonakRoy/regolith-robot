@@ -7,7 +7,7 @@
 #include "Arduino.h"
 #include "helper.h"
 
-EncoderMeasurement  encoder(53);      // encoder handler class, set the motor type 53 or 26 here
+EncoderMeasurement  encoder;          // encoder handler class, set the motor type 53 or 26 here
 RobotPose           robotPose;        // robot position and orientation calculation class
 DeltaRobotPose      deltaRobotPose;
 PIController        wheelVelCtrl;     // velocity PI controller class
@@ -21,18 +21,6 @@ void setup() {
     encoder.init();             // connect with encoder
     wheelVelCtrl.init();        // connect with motor
     delay(1e3);                 // delay 1000 ms so the robot doesn't drive off without you
-
-    // while (true) {
-    //     Serial.println("DRIVE");
-    //     if (Serial.available() > 0) {
-    //         String commandString = Serial.readStringUntil('\n');
-    //         commandString.trim();
-    //         Serial.print('receieved ');
-    //         Serial.println(commandString);
-    //         if (commandString.compareTo("LOCK")) break;
-    //     }
-    //     delay(100);
-    // }
 }
 
 void loop() {
@@ -40,7 +28,6 @@ void loop() {
     unsigned long currentTime = micros();
     
     if (currentTime - prevTime >= PERIOD_MICROS) {
-      
         // 1. Check encoder
         encoder.update(); 
 

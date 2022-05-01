@@ -7,26 +7,15 @@
 #include "helper.h"
 
 //Encoder Measurement Class function implementation
-EncoderMeasurement::EncoderMeasurement(int motor_type): 
+EncoderMeasurement::EncoderMeasurement(): 
     encoder1CountPrev(0),
     encoder2CountPrev(0),
     v_R(0), v_L(0)
 {
-    float rev2enc, gearing;
-    if(motor_type == 53){
-        rev2enc = rev2enc_53;
-        gearing = gearing_53;
-    }
-    else if (motor_type == 26){
-        rev2enc = rev2enc_26;
-        gearing = gearing_26;
-    }
-    else
-        Serial.println("ERROR: BAD MOTOR TYPE INPUT, SHOULD BE 26 or 53");
         
-    enc2rev = 1.0 / rev2enc;
-    enc2rad = enc2rev * 2 * PI;
-    enc2wheel = enc2rad * wheelRadius; 
+    rot_per_tick = 1.0 / tick_per_rot;
+    rad_per_tick = 2 * PI * rot_per_tick;
+    met_per_tick = wheelRadius * rad_per_tick; 
     
     maxMV = voltage * motor_const / gearing * wheelRadius;  // max wheel speed (m/2)
 }
@@ -35,23 +24,25 @@ void EncoderMeasurement::update() {
     float encoder1Count = readEncoder(1);
     float encoder2Count = -1 * readEncoder(2);
 
-//    Serial.print(encoder1Count);
-//    Serial.print(",");
-//    Serial.print(encoder2Count);
-//    Serial.println("");
     float dEncoder1 = (encoder1Count - encoder1CountPrev);
     float dEncoder2 = (encoder2Count - encoder2CountPrev);
     
-    //update the angle incremet in radians
-    float dphi1 = (dEncoder1 * enc2rad);
-    float dphi2 = (dEncoder2 * enc2rad);
+    //update the angle increment in radians
+    float dphi1 = (dEncoder1 * rad_per_tick);
+    float dphi2 = (dEncoder2 * rad_per_tick);
+
+    Serial.print(dphi1);
+    Serial.print(",");
+    Serial.print(dphi2);
+    Serial.println("");
     
     //for encoder index and motor position switching (Right is 1, Left is 2)
     dThetaR = dphi1;
     dThetaL = dphi2;
     
-    float dWheel1 = (dEncoder1 * enc2wheel);
-    float dWheel2 = (dEncoder2 * enc2wheel);
+    //linear distance swept out by wheel
+    float dWheel1 = (dEncoder1 * met_per_tick);
+    float dWheel2 = (dEncoder2 * met_per_tick);
     
     //wheel velocity (Right is 1, Left is 2)
     float mV1 = dWheel1 / PERIOD;
