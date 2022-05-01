@@ -37,15 +37,18 @@ TRAJECTORY = [
     [TURN_TO_FACE,   1.8, 0.6,       ODOM_ONLY],
     [LOCATE_PILE,                    ODOM_ONLY],
     [DRIVE_TO_PILE,                  ODOM_ONLY],
-    [PBAR_SCOOP,     0, 1000, 1500,  APRILTAG_ONLY],
-    [BLIND,         -2.5, -2.5, 4,   ODOM_ONLY],
+    [PBAR_SCOOP,     0, 0, 1500,     APRILTAG_ONLY],
+    # [PBAR_SCOOP,     50, 0, 1500,    APRILTAG_ONLY],
+    [BLIND,         -2.5, -2.5, 3,   APRILTAG_ONLY],
     [WAIT,           0.25,           ODOM_ONLY],
     [WAIT,           0.25,           APRILTAG_ONLY],
     [TURN_TO_FACE,   1.8, 1,         ODOM_ONLY],
     [TURN_TO_FACE,   1.6, 1.8,       ODOM_ONLY],
-    [DRIVE_FWD,      1.6, 1.6,           ODOM_ONLY],
+    [DRIVE_FWD,      1.6, 1.6,       ODOM_ONLY],
     [WAIT,           0.25,           APRILTAG_ONLY],
+    [DRIVE_FWD,      1.8, 1.8,       ODOM_ONLY],
     [TURN_TO_FACE,   2.4, 1.8,       ODOM_ONLY],
+    [DRIVE_FWD,      2.4, 1.8,       ODOM_ONLY],
 ]
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
@@ -92,12 +95,13 @@ def navi_loop():
     rate = rospy.Rate(100) # 100hz
         
     dX = None
-    dTh = None
     global pile
 
     global pbar_pos
     global scoop_wrist_pos
     global scoop_jaw_pos
+
+    pbar_target = 0
 
     traj_index = 0
     traj_cmd = TRAJECTORY[traj_index]
@@ -122,8 +126,10 @@ def navi_loop():
         Th = tfm.euler_from_quaternion(ori)[2]
 
         if traj_cmd[0] == PBAR_SCOOP:
+            pbar_target += np.sign(traj_cmd[0] - pbar_pose) * 5
+
             pbar_pose = PbarPose()
-            pbar_pose.pbar = traj_cmd[1]
+            pbar_pose.pbar = pbar_target
             pbar_pub.publish(pbar_pose)
 
             scoop_pose = ScoopPose()
@@ -131,7 +137,7 @@ def navi_loop():
             scoop_pose.jaw = traj_cmd[3]
             scoop_pub.publish(scoop_pose)
 
-            if abs(pbar_pos - traj_cmd[1]) > 10 or scoop_wrist_pos != traj_cmd[2] or scoop_jaw_pos != traj_cmd[3]:
+            if abs(pbar_target - traj_cmd[1]) > 5 or scoop_wrist_pos != traj_cmd[2] or scoop_jaw_pos != traj_cmd[3]:
                 continue
 
             move_on = True
@@ -148,7 +154,6 @@ def navi_loop():
 
                 Xd = pile_med[0]
                 Yd = pile_med[1]
-                Thd = Th
 
                 move_on = True
 
@@ -176,17 +181,14 @@ def navi_loop():
 
             robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
             pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
-            heading_err_cross = cross2d(dir_mult * robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
+            heading_err_cross = cross2d(robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
 
             if traj_cmd[0] == TURN_TO_FACE:
-                done = np.fabs(heading_err_cross) < 0.05
+                move_on = np.fabs(heading_err_cross) < 0.05
             else:
-                done = np.linalg.norm(pos_delta) < 0.05
+                move_on = np.linalg.norm(pos_delta) < 0.05
 
             if traj_cmd[0] == DRIVE_TO_PILE and (rospy.Time.now()-traj_pt_start_time) > rospy.Duration(5):
-                done = True
-
-            if done:
                 move_on = True
 
             dX = np.linalg.norm(pos_delta)
@@ -198,7 +200,7 @@ def navi_loop():
                     vel_desired = 5
                 else:
                     vel_desired = dir_mult * min(2.0, 10.0*dX)
-                angVel_desired = -heading_err_cross
+                angVel_desired = -dir_mult * heading_err_cross
 
             wcv.desiredWV_L = (vel_desired + angVel_desired)
             wcv.desiredWV_R = (vel_desired - angVel_desired)

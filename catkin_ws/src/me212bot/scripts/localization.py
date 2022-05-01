@@ -12,7 +12,6 @@ from me212bot.msg import WheelCmdVel, DeltaRobotPose, LocalizationMode
 from apriltags.msg import AprilTagDetections
 from helper import transformPose, pubFrame, cross2d, lookupTransform, pose2poselist, invPoselist, diffrad
 from localization_mode import ODOM_ONLY, APRILTAG_ONLY
-from std_srvs.srv import Trigger, TriggerResponse
 
 odom_queue = Queue()
 apriltag_queue = Queue()
@@ -60,19 +59,8 @@ def thread_target():
     while not rospy.is_shutdown():
         current_time = rospy.Time.now()
 
-        if localization_mode == ODOM_ONLY:
-            while not apriltag_queue.empty(): apriltag_queue.get()
-
-            while not odom_queue.empty():
-                odom = odom_queue.get()
-
-                Th += odom.delta_theta
-                X += odom.distance * np.cos(Th)
-                Y += odom.distance * np.sin(Th)
-
-                if odom.header.stamp >= current_time:
-                    break
-        elif localization_mode == APRILTAG_ONLY:
+        fallback = False
+        if localization_mode == APRILTAG_ONLY:
             while not odom_queue.empty(): odom_queue.get()
 
             april_tag_poses = []
@@ -87,7 +75,21 @@ def thread_target():
                 Y = avg_pose[1]
                 Th = tfm.euler_from_quaternion(norm_quat)[2]
             except:
-                print "Could not AprilTag"
+                print "No AprilTags visible; falling back to odometry"
+                fallback = True
+
+        if localization_mode == ODOM_ONLY or fallback:
+            while not apriltag_queue.empty(): apriltag_queue.get()
+
+            while not odom_queue.empty():
+                odom = odom_queue.get()
+
+                Th += odom.delta_theta
+                X += odom.distance * np.cos(Th)
+                Y += odom.distance * np.sin(Th)
+
+                if odom.header.stamp >= current_time:
+                    break
             
         pubFrame(br, pose=[X, Y, 0, 0, 0, Th], frame_id = '/robot_base', parent_frame_id = '/map')
         
