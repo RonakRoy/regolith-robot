@@ -61,8 +61,6 @@ def thread_target():
 
         fallback = False
         if localization_mode == APRILTAG_ONLY:
-            while not odom_queue.empty(): odom_queue.get()
-
             april_tag_poses = []
             while not apriltag_queue.empty():
                 april_tag_poses.append(apriltag_queue.get())
@@ -77,6 +75,8 @@ def thread_target():
             except:
                 print "No AprilTags visible; falling back to odometry"
                 fallback = True
+
+            while not odom_queue.empty(): odom_queue.get()
 
         if localization_mode == ODOM_ONLY or fallback:
             while not apriltag_queue.empty(): apriltag_queue.get()
@@ -102,8 +102,6 @@ def mode_callback(msg):
 
 def odom_callback(msg):
     global localization_mode
-    if localization_mode != ODOM_ONLY: return
-
     odom_queue.put(msg)
 
 def apriltag_callback(data):

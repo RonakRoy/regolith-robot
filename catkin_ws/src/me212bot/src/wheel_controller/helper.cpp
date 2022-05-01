@@ -34,6 +34,11 @@ EncoderMeasurement::EncoderMeasurement(int motor_type):
 void EncoderMeasurement::update() {
     float encoder1Count = readEncoder(1);
     float encoder2Count = -1 * readEncoder(2);
+
+//    Serial.print(encoder1Count);
+//    Serial.print(",");
+//    Serial.print(encoder2Count);
+//    Serial.println("");
     float dEncoder1 = (encoder1Count - encoder1CountPrev);
     float dEncoder2 = (encoder2Count - encoder2CountPrev);
     

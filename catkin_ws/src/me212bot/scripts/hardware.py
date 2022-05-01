@@ -24,6 +24,8 @@ scoop_arduino = None
 def main():
     rospy.init_node('me212bot', anonymous=True)
 
+    print "\n\nSTARTING HARDWARE NODE..."
+
     global drive_arduino
     global pbar_arduino
     global scoop_arduino

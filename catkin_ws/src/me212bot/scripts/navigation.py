@@ -32,23 +32,47 @@ WAIT = 5
 BLIND = 6
 PBAR_SCOOP = 7
 
+face_x_pile = [TURN_TO_FACE,   1.8, 0.6,       ODOM_ONLY]
+face_y_pile = [TURN_TO_FACE,   0.6, 1.8,       ODOM_ONLY]
+
+corner_face_x_pile = [TURN_TO_FACE,   1.6, 1.0,         ODOM_ONLY]
+corner_face_y_pile = [TURN_TO_FACE,   1.0, 1.6,         ODOM_ONLY]
+
 TRAJECTORY = [
+    # Drive to middle
     [DRIVE_FWD,      1.1, 1.1,       ODOM_ONLY],
-    [TURN_TO_FACE,   1.8, 0.6,       ODOM_ONLY],
+    face_y_pile,
+
+    # Pile in-n-out
     [LOCATE_PILE,                    ODOM_ONLY],
     [DRIVE_TO_PILE,                  ODOM_ONLY],
-    [PBAR_SCOOP,     0, 0, 1500,     APRILTAG_ONLY],
-    # [PBAR_SCOOP,     50, 0, 1500,    APRILTAG_ONLY],
-    [BLIND,         -2.5, -2.5, 3,   APRILTAG_ONLY],
-    [WAIT,           0.25,           ODOM_ONLY],
-    [WAIT,           0.25,           APRILTAG_ONLY],
-    [TURN_TO_FACE,   1.8, 1,         ODOM_ONLY],
-    [TURN_TO_FACE,   1.6, 1.8,       ODOM_ONLY],
-    [DRIVE_FWD,      1.6, 1.6,       ODOM_ONLY],
+    [PBAR_SCOOP,     0, 0, 1500,     ODOM_ONLY],
+    [BLIND,         -2.5, -2.5, 3,   ODOM_ONLY],
+    [PBAR_SCOOP,     0, 1300, 2800,  ODOM_ONLY],
+    [WAIT,           0.5,            APRILTAG_ONLY],
+
+    # Go to box and deposit
+    corner_face_y_pile,
+    [TURN_TO_FACE,   1.6, 1.6,       ODOM_ONLY],
+    [DRIVE_FWD,      1.4, 1.4,       ODOM_ONLY],
     [WAIT,           0.25,           APRILTAG_ONLY],
     [DRIVE_FWD,      1.8, 1.8,       ODOM_ONLY],
-    [TURN_TO_FACE,   2.4, 1.8,       ODOM_ONLY],
-    [DRIVE_FWD,      2.4, 1.8,       ODOM_ONLY],
+    [WAIT,           0.25,           APRILTAG_ONLY],
+    [TURN_TO_FACE,   2.4, 2.0,       ODOM_ONLY],
+    [WAIT,           0.5,            APRILTAG_ONLY],
+    [DRIVE_FWD,      2.4, 2.0,       ODOM_ONLY],
+    [TURN_TO_FACE,   2.8, 2.0,       ODOM_ONLY],
+    [BLIND,          1.0, 1.0, 3,    APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1300, 900,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, -600, -1000, APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, -200, -1600, APRILTAG_ONLY],
+    [WAIT,           1.5,            APRILTAG_ONLY],
+
+    # Back out to middle
+    [PBAR_SCOOP,     0, 1300, 1300,  APRILTAG_ONLY],
+    [DRIVE_BWD,      1.8, 1.8,       APRILTAG_ONLY],
+    [DRIVE_BWD,      1.8, 1.1,       APRILTAG_ONLY],
+    face_x_pile,
 ]
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
@@ -126,10 +150,11 @@ def navi_loop():
         Th = tfm.euler_from_quaternion(ori)[2]
 
         if traj_cmd[0] == PBAR_SCOOP:
-            pbar_target += np.sign(traj_cmd[0] - pbar_pose) * 5
+            if np.abs(traj_cmd[1] - pbar_target) > 2.0:
+                pbar_target += 0.50 * np.sign(traj_cmd[1] - pbar_pos)
 
             pbar_pose = PbarPose()
-            pbar_pose.pbar = pbar_target
+            pbar_pose.pbar = int(pbar_target)
             pbar_pub.publish(pbar_pose)
 
             scoop_pose = ScoopPose()
@@ -137,13 +162,13 @@ def navi_loop():
             scoop_pose.jaw = traj_cmd[3]
             scoop_pub.publish(scoop_pose)
 
-            if abs(pbar_target - traj_cmd[1]) > 5 or scoop_wrist_pos != traj_cmd[2] or scoop_jaw_pos != traj_cmd[3]:
+            if abs(pbar_target - traj_cmd[1]) > 2.0 or scoop_wrist_pos != traj_cmd[2] or scoop_jaw_pos != traj_cmd[3]:
                 continue
 
             move_on = True
 
         elif traj_cmd[0] == LOCATE_PILE:
-            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(1.5):
+            if (rospy.Time.now()-traj_pt_start_time) < rospy.Duration(2):
                 continue
 
             if len(pile_samples) < 100:
@@ -197,7 +222,7 @@ def navi_loop():
                 angVel_desired = -np.sign(heading_err_cross)
             else:
                 if traj_cmd[0] == DRIVE_TO_PILE:
-                    vel_desired = 5
+                    vel_desired = 3
                 else:
                     vel_desired = dir_mult * min(2.0, 10.0*dX)
                 angVel_desired = -dir_mult * heading_err_cross
@@ -233,7 +258,7 @@ def navi_loop():
 
     wcv.desiredWV_R = 0
     wcv.desiredWV_L = 0
-            
+    
     velcmd_pub.publish(wcv)  
 
 if __name__=='__main__':
