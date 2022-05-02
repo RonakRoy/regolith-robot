@@ -32,11 +32,11 @@ WAIT = 5
 BLIND = 6
 PBAR_SCOOP = 7
 
-face_x_pile = [TURN_TO_FACE,   1.8, 0.6,       ODOM_ONLY]
-face_y_pile = [TURN_TO_FACE,   0.6, 1.8,       ODOM_ONLY]
+face_x_pile = [TURN_TO_FACE,   2.4, 0.0,       ODOM_ONLY]
+face_y_pile = [TURN_TO_FACE,   0.0, 2.4,       ODOM_ONLY]
 
-corner_face_x_pile = [TURN_TO_FACE,   1.6, 1.0,         ODOM_ONLY]
-corner_face_y_pile = [TURN_TO_FACE,   1.0, 1.6,         ODOM_ONLY]
+corner_face_x_pile = [TURN_TO_FACE,   2.4, 1.2,         ODOM_ONLY]
+corner_face_y_pile = [TURN_TO_FACE,   1.2, 2.4,         ODOM_ONLY]
 
 TRAJECTORY = [
 #   [CMD_NAME,       CMD_PARAMS,     T,   LOC_MODE],
@@ -55,14 +55,13 @@ TRAJECTORY = [
 
     # Go to box and deposit
     corner_face_y_pile,
-    [TURN_TO_FACE,   1.6, 1.6,        -1,   ODOM_ONLY],
+    [TURN_TO_FACE,   2.4, 2.4,        -1,   ODOM_ONLY],
     [DRIVE_FWD,      1.4, 1.4,        -1,   ODOM_ONLY],
     [WAIT,                             0.3, APRILTAG_ONLY],
     [DRIVE_FWD,      1.8, 1.8,        -1,   ODOM_ONLY],
     [WAIT,                             0.3, APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.4, 2.0,        -1,   ODOM_ONLY],
+    [DRIVE_FWD,      2.0, 2.0,        -1,   ODOM_ONLY],
     [WAIT,                             0.5, APRILTAG_ONLY],
-    [DRIVE_FWD,      2.4, 2.0,        -1,   ODOM_ONLY],
     [TURN_TO_FACE,   2.8, 2.0,        -1,   ODOM_ONLY],
     [BLIND,          1.0, 1.0,         3.0, APRILTAG_ONLY],
     [PBAR_SCOOP,     0, 1300, 900,    -1,   APRILTAG_ONLY],
