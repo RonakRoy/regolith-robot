@@ -6,6 +6,8 @@ DualTB9051FTGMotorShield md;
 int encoder_count = 0;
 int current_count = 0;
 
+int final_goal = 0;
+
 int desired_count = 0;
 int error = 0;
 long current_time, last_time;
@@ -36,6 +38,13 @@ void setup() {
 void loop() {
     receiveSerialData();
 
+    if (desired_count < final_goal) {
+      desired_count = min(current_count+10, final_goal);
+    }
+    else if (desired_count > final_goal) {
+      desired_count = max(current_count-20, final_goal);
+    }
+
     current_time = millis();
     current_count = encoder_count;
 
@@ -64,7 +73,7 @@ void receiveSerialData() {
             command[i] = tempString.toFloat();
             commandString = commandString.substring(indexPointer+1);
         }
-        desired_count = command[0];
+        final_goal = command[0];
     }
 }
 
