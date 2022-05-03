@@ -85,20 +85,18 @@ BACK_OUT_TO_MIDDLE = [
 ]
 
 # Build the trajectory
-# TRAJECTORY = []
-# TRAJECTORY += [
-#     [DRIVE_FWD,      1.1, 1.1,        -1,     ODOM_ONLY],
-#     face_x_pile,
-# ]
-# TRAJECTORY += PILE_IN_N_OUT + [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT
-# TRAJECTORY += BACK_OUT_TO_MIDDLE
-# TRAJECTORY += [
-#     face_y_pile,
-#     [PBAR_SCOOP,     0, 0, 0,                 ODOM_ONLY],
-# ]
-# TRAJECTORY += PILE_IN_N_OUT + [corner_face_y_pile] + GO_TO_BOX_AND_DEPOSIT
-
-TRAJECTORY = [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT
+TRAJECTORY = []
+TRAJECTORY += [
+    [DRIVE_FWD,      1.1, 1.1,        -1,     ODOM_ONLY],
+    face_x_pile,
+]
+TRAJECTORY += PILE_IN_N_OUT + [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT
+TRAJECTORY += BACK_OUT_TO_MIDDLE
+TRAJECTORY += [
+    face_y_pile,
+    [PBAR_SCOOP,     0, 0, 0,                 ODOM_ONLY],
+]
+TRAJECTORY += PILE_IN_N_OUT + [corner_face_y_pile] + GO_TO_BOX_AND_DEPOSIT
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
 
