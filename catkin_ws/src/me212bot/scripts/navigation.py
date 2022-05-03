@@ -39,41 +39,51 @@ corner_face_x_pile = [TURN_TO_FACE,   2.4, 1.2,         ODOM_ONLY]
 corner_face_y_pile = [TURN_TO_FACE,   1.2, 2.4,         ODOM_ONLY]
 
 TRAJECTORY = [
-#   [CMD_NAME,       CMD_PARAMS,     T,   LOC_MODE],
+    #[CMD_NAME,       CMD_PARAMS,     T,   LOC_MODE],
 
     # Drive to middle
     [DRIVE_FWD,      1.1, 1.1,        -1,   ODOM_ONLY],
-    face_y_pile,
+    face_x_pile,
 
-    # Pile in-n-out
+    # # Pile in-n-out
+    [WAIT,                             1.0, ODOM_ONLY],
     [LOCATE_PILE,                      2.0, ODOM_ONLY],
     [DRIVE_TO_PILE,                    5.0, ODOM_ONLY],
-    [PBAR_SCOOP,     0, 0, 1500,      -1,   ODOM_ONLY],
-    [BLIND,         -2.5, -2.5,        3.0, ODOM_ONLY],
-    [PBAR_SCOOP,     0, 1300, 2800,   -1,   ODOM_ONLY],
-    [WAIT,                             0.5,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 0, 1700,      -1,   ODOM_ONLY],
+    [BLIND,         -1, -1,            0.5, ODOM_ONLY],
+    [WAIT,                             0.25,APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1000, 2700,   -1,   ODOM_ONLY],
+    [BLIND,         -1, -1,            2.25, ODOM_ONLY],
 
     # Go to box and deposit
-    corner_face_y_pile,
-    [TURN_TO_FACE,   2.4, 2.4,        -1,   ODOM_ONLY],
-    [DRIVE_FWD,      1.4, 1.4,        -1,   ODOM_ONLY],
-    [WAIT,                             0.3, APRILTAG_ONLY],
-    [DRIVE_FWD,      1.8, 1.8,        -1,   ODOM_ONLY],
-    [WAIT,                             0.3, APRILTAG_ONLY],
+    corner_face_x_pile,
+    [TURN_TO_FACE,   1.6, 1.6,        -1,   ODOM_ONLY],
+    [DRIVE_FWD,      1.6, 1.6,        -1,   ODOM_ONLY],
+    [WAIT,                             0.5,ODOM_ONLY],
+    [WAIT,                             0.25,APRILTAG_ONLY],
+    [TURN_TO_FACE,   2.0, 2.0,        -1,   ODOM_ONLY],
     [DRIVE_FWD,      2.0, 2.0,        -1,   ODOM_ONLY],
-    [WAIT,                             0.5, APRILTAG_ONLY],
+    [WAIT,                             0.5,ODOM_ONLY],
+    [WAIT,                             0.25,APRILTAG_ONLY],
     [TURN_TO_FACE,   2.8, 2.0,        -1,   ODOM_ONLY],
     [BLIND,          1.0, 1.0,         3.0, APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1300, 900,    -1,   APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, -600, -1000,  -1,   APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, -200, -1600,  -1,   APRILTAG_ONLY],
-    [WAIT,                             1.5, APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1000, 600,    -1,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, -200, -600,  -1,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0,    0, -1500,  -1,   APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1000, -1500,  -1,   APRILTAG_ONLY],
+    [WAIT,                             1.5,   APRILTAG_ONLY],
 
     # Back out to middle
-    [PBAR_SCOOP,     0, 1300, 1300,  APRILTAG_ONLY],
-    [DRIVE_BWD,      1.8, 1.8,       APRILTAG_ONLY],
-    [DRIVE_BWD,      1.8, 1.1,       APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 0, -1500,     -1,     APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1300, 1300,           APRILTAG_ONLY],
+    [BLIND,         -1, -1,            0.5,   ODOM_ONLY],
+    [WAIT,                             0.5,   ODOM_ONLY],
+    [WAIT,                             1.0,   APRILTAG_ONLY],
+    [DRIVE_BWD,      1.8, 1.8,        -1,     ODOM_ONLY],
+    [WAIT,                             1.5,   APRILTAG_ONLY],
+    [DRIVE_BWD,      1.1, 1.1,        -1,     APRILTAG_ONLY],
     face_x_pile,
+    [PBAR_SCOOP,     0, 0, 0,           APRILTAG_ONLY],
 ]
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
@@ -136,6 +146,8 @@ def navi_loop():
 
     loc_mode.mode = traj_cmd[-1]
     loc_mod_pub.publish(loc_mode)
+
+    err_inc_count = 0
 
     pile_samples = []
 
@@ -201,23 +213,30 @@ def navi_loop():
 
             robot_heading_vec = np.array([np.cos(Th), np.sin(Th)])
             pos_delta = np.array([Xd, Yd]) - np.array([X, Y])
-            heading_err_cross = cross2d(robot_heading_vec, pos_delta / np.linalg.norm(pos_delta))
+            heading_err_cross = cross2d(robot_heading_vec, dir_mult * pos_delta / np.linalg.norm(pos_delta))
 
             if traj_cmd[0] == TURN_TO_FACE:
-                move_on = np.fabs(heading_err_cross) < 0.05
+                move_on = move_on or np.fabs(heading_err_cross) < 0.05
             else:
-                move_on = np.linalg.norm(pos_delta) < 0.05
+                move_on = move_on or np.linalg.norm(pos_delta) < 0.05
 
-            dX = np.linalg.norm(pos_delta)
             if traj_cmd[0] == TURN_TO_FACE:
                 vel_desired = 0
                 angVel_desired = -np.sign(heading_err_cross)
             else:
+                dX_old = dX
+                dX = np.linalg.norm(pos_delta)
+
+                if dX > dX_old:
+                    err_inc_count += 1
+                else:
+                    err_inc_count = 0
+
                 if traj_cmd[0] == DRIVE_TO_PILE:
                     vel_desired = 3
                 else:
                     vel_desired = dir_mult * min(2.0, 10.0*dX)
-                angVel_desired = -dir_mult * heading_err_cross
+                angVel_desired = -heading_err_cross
 
             wcv.desiredWV_L = 0.25*(vel_desired + angVel_desired)
             wcv.desiredWV_R = 0.25*(vel_desired - angVel_desired)

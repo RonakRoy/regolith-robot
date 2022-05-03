@@ -100,10 +100,30 @@ def rgb_callback(msg):
     thresh_img_msg.header.stamp = rospy.Time.now()
     thresh_pub.publish(thresh_img_msg)
 
-    kernel = np.ones((5,5),np.uint8)
+    # kernel = np.array([
+    #     [0, 0, 0, 0, 0,  1, 0, 0, 0, 0],
+    #    [0, 0,  1,  1,  1,  1,  1,  1,  1, 0],
+    #    [0,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [0,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [0,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [ 1,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [0,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [0,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [0,  1,  1,  1,  1,  1,  1,  1,  1,
+    #      1],
+    #    [0, 0,  1,  1,  1,  1,  1,  1,  1,
+    #     0]], np.uint8)
+
+    kernel = np.ones((5,5), np.uint8)
 
     # open
-    opened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations = 3)
+    opened = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations = 1)
 
     open_img_msg = cv_bridge.cv2_to_imgmsg(opened)
     open_img_msg.header.stamp = rospy.Time.now()

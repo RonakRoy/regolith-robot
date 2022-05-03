@@ -103,7 +103,7 @@ class SerialComm {
         unsigned long current_time = micros();
         if (current_time - prevSerialTime >= SERIAL_PERIOD_MICROS) {
             Serial.print("DRIVE,");
-            Serial.print(sqrt(robotPose.X*robotPose.X + robotPose.Y*robotPose.Y), 18);
+            Serial.print((robotPose.X >= 0 ? 1.0 : -1.0) * sqrt(robotPose.X*robotPose.X + robotPose.Y*robotPose.Y), 18);
             Serial.print(",");
             Serial.println(robotPose.Th, 18);
             prevSerialTime = current_time;

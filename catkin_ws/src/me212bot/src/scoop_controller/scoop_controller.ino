@@ -1,6 +1,6 @@
 #define WRIST_STEP 3
 #define WRIST_DIR 6
-#define WRIST_PULSE_TIME 4000
+#define WRIST_PULSE_TIME 20000
 
 #define JAW_STEP 2
 #define JAW_DIR 5
