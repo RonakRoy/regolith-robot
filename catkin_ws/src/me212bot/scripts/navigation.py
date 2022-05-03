@@ -32,72 +32,73 @@ WAIT = 5
 BLIND = 6
 PBAR_SCOOP = 7
 
-face_x_pile = [TURN_TO_FACE,   2.4, 0.0,       ODOM_ONLY]
-face_y_pile = [TURN_TO_FACE,   0.0, 2.4,       ODOM_ONLY]
+face_x_pile = [TURN_TO_FACE,   2.4, 0.0,       5.0, ODOM_ONLY]
+face_y_pile = [TURN_TO_FACE,   0.0, 2.2,       5.0, ODOM_ONLY]
 
-corner_face_x_pile = [TURN_TO_FACE,   2.4, 1.2,         ODOM_ONLY]
-corner_face_y_pile = [TURN_TO_FACE,   1.2, 2.4,         ODOM_ONLY]
+corner_face_x_pile = [TURN_TO_FACE, 2.4, 1.2,  5.0, ODOM_ONLY]
+corner_face_y_pile = [TURN_TO_FACE, 1.2, 2.4,  5.0, ODOM_ONLY]
 
 
 # TRAJECTORY SEGMENTS
 PILE_IN_N_OUT = [
-    [WAIT,                             1.0, ODOM_ONLY],
-    [LOCATE_PILE,                      2.0, ODOM_ONLY],
-    [DRIVE_TO_PILE,                    5.0, ODOM_ONLY],
-    [PBAR_SCOOP,     0, 0, 1700,      -1,   ODOM_ONLY],
-    [BLIND,         -1, -1,            0.5, ODOM_ONLY],
-    [WAIT,                             1.0,ODOM_ONLY],
-    [WAIT,                             0.50,APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1000, 2700,   -1,   ODOM_ONLY],
-    [DRIVE_BWD,      1.1, 1.1,         1.5,   ODOM_ONLY],
+    [WAIT,                             1.0,   ODOM_ONLY],
+    [LOCATE_PILE,                      2.0,   ODOM_ONLY],
+    [DRIVE_TO_PILE,                    5.0,   ODOM_ONLY],
+    [PBAR_SCOOP,     0, 0, 1700,      -1,     ODOM_ONLY],
+    [BLIND,         -1, -1,            0.5,   ODOM_ONLY],
+    [WAIT,                             1.0,   ODOM_ONLY],
+    [WAIT,                             0.50,  APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1000, 2700,   -1,     ODOM_ONLY],
+    [DRIVE_BWD,      1.1, 1.1,         5.0,   ODOM_ONLY],
 ]
 
 GO_TO_BOX_AND_DEPOSIT = [
-    [TURN_TO_FACE,   1.6, 1.6,        -1,   ODOM_ONLY],
-    [DRIVE_FWD,      1.6, 1.6,        -1,   ODOM_ONLY],
-    [WAIT,                             1.0, ODOM_ONLY],
-    [WAIT,                             0.50,APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.0, 2.0,        -1,   ODOM_ONLY],
-    [DRIVE_FWD,      2.0, 2.0,        -1,   ODOM_ONLY],
-    [WAIT,                             1.0, ODOM_ONLY],
-    [WAIT,                             0.50,APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.8, 2.0,        -1,   ODOM_ONLY],
-    [BLIND,          1.0, 1.0,         3.0, ODOM_ONLY],
-    [PBAR_SCOOP,     0, 1000, 500,    -1,   ODOM_ONLY],
-    [PBAR_SCOOP,     0, -200, -700,   -1,   ODOM_ONLY],
-    [PBAR_SCOOP,     0,    0, -1500,  -1,   ODOM_ONLY],
-    [PBAR_SCOOP,     0, 1000, -1500,  -1,   ODOM_ONLY],
-    [WAIT,                             1.0, ODOM_ONLY],
-    [WAIT,                             0.25,APRILTAG_ONLY],
+    [TURN_TO_FACE,   1.6, 1.6,        -1,     ODOM_ONLY],
+    [DRIVE_FWD,      1.6, 1.6,        -1,     ODOM_ONLY],
+    [WAIT,                             1.0,   ODOM_ONLY],
+    [WAIT,                             0.50,  APRILTAG_ONLY],
+    [TURN_TO_FACE,   1.9, 1.9,        -1,     ODOM_ONLY],
+    [DRIVE_FWD,      1.9, 1.9,        -1,     ODOM_ONLY],
+    [WAIT,                             1.0,   ODOM_ONLY],
+    [WAIT,                             0.50,  APRILTAG_ONLY],
+    [TURN_TO_FACE,   2.8, 2.0,        -1,     ODOM_ONLY],
+    [BLIND,          1.0, 1.0,         3.0,   ODOM_ONLY],
+    [PBAR_SCOOP,     0, 1000, 500,    -1,     ODOM_ONLY],
+    [PBAR_SCOOP,     0, -200, -700,   -1,     ODOM_ONLY],
+    [PBAR_SCOOP,     0,   0, -1500,   -1,     ODOM_ONLY],
+    [WAIT,                             1.0,   ODOM_ONLY],
+    [WAIT,                             0.25,  APRILTAG_ONLY],
 ]
 
 BACK_OUT_TO_MIDDLE = [
-    [PBAR_SCOOP,     0, 0, -1500,     -1,     APRILTAG_ONLY],
     [PBAR_SCOOP,     0, 1300, 1300,   -1,     APRILTAG_ONLY],
-    [BLIND,         -1.25, -1,         0.75,  ODOM_ONLY],
+    [BLIND,         -1, -1,            1.25,  ODOM_ONLY],
     [WAIT,                             1.0,   ODOM_ONLY],
     [WAIT,                             0.50,  APRILTAG_ONLY],
     [TURN_TO_FACE,   2.4, 2.4,        -1,     ODOM_ONLY],
     [WAIT,                             1.0,   ODOM_ONLY],
     [WAIT,                             0.50,  APRILTAG_ONLY],
-    [DRIVE_BWD,      1.8, 1.8,         2.0,     ODOM_ONLY],
+    [DRIVE_BWD,      1.8, 1.8,         5.0,   ODOM_ONLY],
     [WAIT,                             1.0,   ODOM_ONLY],
     [WAIT,                             0.50,  APRILTAG_ONLY],
-    [DRIVE_BWD,      1.1, 1.1,         2.0,     ODOM_ONLY],
+    [DRIVE_BWD,      1.1, 1.1,         5.0,   ODOM_ONLY],
 ]
 
 # Build the trajectory
-TRAJECTORY = []
-TRAJECTORY += [
-    [DRIVE_FWD,      1.1, 1.1,        -1,   ODOM_ONLY],
-    face_x_pile,
-]
-TRAJECTORY += PILE_IN_N_OUT + [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT + BACK_OUT_TO_MIDDLE
-TRAJECTORY += [
-    face_y_pile,
-    [PBAR_SCOOP,     0, 0, 0,                 ODOM_ONLY],
-]
-TRAJECTORY += PILE_IN_N_OUT + [corner_face_y_pile] + GO_TO_BOX_AND_DEPOSIT + BACK_OUT_TO_MIDDLE
+# TRAJECTORY = []
+# TRAJECTORY += [
+#     [DRIVE_FWD,      1.1, 1.1,        -1,     ODOM_ONLY],
+#     face_x_pile,
+# ]
+# TRAJECTORY += PILE_IN_N_OUT + [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT
+# TRAJECTORY += BACK_OUT_TO_MIDDLE
+# TRAJECTORY += [
+#     face_y_pile,
+#     [PBAR_SCOOP,     0, 0, 0,                 ODOM_ONLY],
+# ]
+# TRAJECTORY += PILE_IN_N_OUT + [corner_face_y_pile] + GO_TO_BOX_AND_DEPOSIT
+
+TRAJECTORY = [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
 
@@ -163,6 +164,7 @@ def navi_loop():
     err_inc_count = 0
 
     pile_samples = []
+    error_buffer = []
 
     while not rospy.is_shutdown():
         wcv = WheelCmdVel()
@@ -231,25 +233,29 @@ def navi_loop():
             if traj_cmd[0] == TURN_TO_FACE:
                 move_on = move_on or np.fabs(heading_err_cross) < 0.05
             else:
-                move_on = move_on or np.linalg.norm(pos_delta) < 0.1 or err_inc_count >= 25
+                move_on = move_on or np.linalg.norm(pos_delta) < 0.1
 
             if traj_cmd[0] == TURN_TO_FACE:
+                err = abs(heading_err_cross)
+                
                 vel_desired = 0
                 angVel_desired = -np.sign(heading_err_cross)
             else:
-                dX_old = dX
-                dX = np.linalg.norm(pos_delta)
-
-                if dX > dX_old:
-                    err_inc_count += 1
-                else:
-                    err_inc_count = 0
+                err = np.linalg.norm(pos_delta)
 
                 if traj_cmd[0] == DRIVE_TO_PILE:
-                    vel_desired = 3
+                    vel_desired = 5
                 else:
-                    vel_desired = dir_mult * min(2.0, 10.0*dX)
-                angVel_desired = -heading_err_cross
+                    vel_desired = dir_mult * min(2.0, 10.0*err)
+
+                angVel_desired = -(3.0 if traj_cmd[0] == DRIVE_TO_PILE else 1.0) * heading_err_cross
+
+                # error_buffer.insert(0, err)
+                # if len(error_buffer) == 51:
+                #     error_buffer.pop(50)
+                #     if error_buffer[0] >= error_buffer[-1]:
+                #         move_on = True
+                #         error_buffer = []
 
             wcv.desiredWV_L = 0.25*(vel_desired + angVel_desired)
             wcv.desiredWV_R = 0.25*(vel_desired - angVel_desired)
