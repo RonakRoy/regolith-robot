@@ -87,7 +87,8 @@ BACK_OUT_TO_MIDDLE = [
 ]
 
 # Build the trajectory
-TRAJECTORY = [
+TRAJECTORY = []
+TRAJECTORY += [
     [DRIVE_FWD,      1.1, 1.1,        -1,   ODOM_ONLY],
     face_x_pile,
 ]
