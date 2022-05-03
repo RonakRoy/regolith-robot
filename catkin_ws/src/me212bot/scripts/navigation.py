@@ -38,14 +38,9 @@ face_y_pile = [TURN_TO_FACE,   0.0, 2.4,       ODOM_ONLY]
 corner_face_x_pile = [TURN_TO_FACE,   2.4, 1.2,         ODOM_ONLY]
 corner_face_y_pile = [TURN_TO_FACE,   1.2, 2.4,         ODOM_ONLY]
 
-TRAJECTORY = [
-    #[CMD_NAME,       CMD_PARAMS,     T,   LOC_MODE],
 
-    # Drive to middle
-    [DRIVE_FWD,      1.1, 1.1,        -1,   ODOM_ONLY],
-    face_x_pile,
-
-    # Pile x in-n-out
+# TRAJECTORY SEGMENTS
+PILE_IN_N_OUT = [
     [WAIT,                             1.0, ODOM_ONLY],
     [LOCATE_PILE,                      2.0, ODOM_ONLY],
     [DRIVE_TO_PILE,                    5.0, ODOM_ONLY],
@@ -55,55 +50,9 @@ TRAJECTORY = [
     [WAIT,                             0.25,APRILTAG_ONLY],
     [PBAR_SCOOP,     0, 1000, 2700,   -1,   ODOM_ONLY],
     [DRIVE_BWD,      1.1, 1.1,        -1,   ODOM_ONLY],
+]
 
-    # Go to box and deposit
-    corner_face_x_pile,
-    [TURN_TO_FACE,   1.6, 1.6,        -1,   ODOM_ONLY],
-    [DRIVE_FWD,      1.6, 1.6,        -1,   ODOM_ONLY],
-    [WAIT,                             0.5, ODOM_ONLY],
-    [WAIT,                             0.25,APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.0, 2.0,        -1,   ODOM_ONLY],
-    [DRIVE_FWD,      2.0, 2.0,        -1,   ODOM_ONLY],
-    [WAIT,                             0.5, ODOM_ONLY],
-    [WAIT,                             0.25,APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.8, 2.0,        -1,   ODOM_ONLY],
-    [BLIND,          1.0, 1.0,         3.0, APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1000, 500,    -1,   APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, -200, -700,  -1,    APRILTAG_ONLY],
-    [PBAR_SCOOP,     0,    0, -1500,  -1,   APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1000, -1500,  -1,   APRILTAG_ONLY],
-    [WAIT,                             0.25,ODOM_ONLY],
-    [WAIT,                             0.25,APRILTAG_ONLY],
-
-    # Back out to middle
-    [PBAR_SCOOP,     0, 0, -1500,     -1,     APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1300, 1300,           APRILTAG_ONLY],
-    [BLIND,         -1.25, -1,         0.5,   ODOM_ONLY],
-    [WAIT,                             0.25,  ODOM_ONLY],
-    [WAIT,                             0.25,  APRILTAG_ONLY],
-    [TURN_TO_FACE,   2.4, 2.4,        -1,     ODOM_ONLY],
-    [WAIT,                             0.25,  ODOM_ONLY],
-    [WAIT,                             0.25,  APRILTAG_ONLY],
-    [DRIVE_BWD,      1.8, 1.8,        -1,     ODOM_ONLY],
-    [WAIT,                             0.25,  ODOM_ONLY],
-    [WAIT,                             0.25,  APRILTAG_ONLY],
-    [DRIVE_BWD,      1.1, 1.1,        -1,     ODOM_ONLY],
-    face_y_pile,
-    [PBAR_SCOOP,     0, 0, 0,                 ODOM_ONLY],
-
-    # Pile y in-n-out
-    [WAIT,                             0.5, ODOM_ONLY],
-    [LOCATE_PILE,                      2.0, ODOM_ONLY],
-    [DRIVE_TO_PILE,                    5.0, ODOM_ONLY],
-    [PBAR_SCOOP,     0, 0, 1700,      -1,   ODOM_ONLY],
-    [BLIND,         -1, -1,            0.5, ODOM_ONLY],
-    [WAIT,                             0.25,ODOM_ONLY],
-    [WAIT,                             0.25,APRILTAG_ONLY],
-    [PBAR_SCOOP,     0, 1000, 2700,   -1,   ODOM_ONLY],
-    [DRIVE_BWD,      1.1, 1.1,        -1,   ODOM_ONLY],
-
-    # Go to box and deposit
-    corner_face_y_pile,
+GO_TO_BOX_AND_DEPOSIT = [
     [TURN_TO_FACE,   1.6, 1.6,        -1,   ODOM_ONLY],
     [DRIVE_FWD,      1.6, 1.6,        -1,   ODOM_ONLY],
     [WAIT,                             0.5, ODOM_ONLY],
@@ -121,6 +70,33 @@ TRAJECTORY = [
     [WAIT,                             0.25,ODOM_ONLY],
     [WAIT,                             0.25,APRILTAG_ONLY],
 ]
+
+BACK_OUT_TO_MIDDLE = [
+    [PBAR_SCOOP,     0, 0, -1500,     -1,     APRILTAG_ONLY],
+    [PBAR_SCOOP,     0, 1300, 1300,           APRILTAG_ONLY],
+    [BLIND,         -1.25, -1,         0.75,   ODOM_ONLY],
+    [WAIT,                             0.25,  ODOM_ONLY],
+    [WAIT,                             0.25,  APRILTAG_ONLY],
+    [TURN_TO_FACE,   2.4, 2.4,        -1,     ODOM_ONLY],
+    [WAIT,                             0.25,  ODOM_ONLY],
+    [WAIT,                             0.25,  APRILTAG_ONLY],
+    [DRIVE_BWD,      1.8, 1.8,        -1,     ODOM_ONLY],
+    [WAIT,                             0.25,  ODOM_ONLY],
+    [WAIT,                             0.25,  APRILTAG_ONLY],
+    [DRIVE_BWD,      1.1, 1.1,        -1,     ODOM_ONLY],
+]
+
+# Build the trajectory
+TRAJECTORY = [
+    [DRIVE_FWD,      1.1, 1.1,        -1,   ODOM_ONLY],
+    face_x_pile,
+]
+TRAJECTORY += PILE_IN_N_OUT + [corner_face_x_pile] + GO_TO_BOX_AND_DEPOSIT + BACK_OUT_TO_MIDDLE
+TRAJECTORY += [
+    face_y_pile,
+    [PBAR_SCOOP,     0, 0, 0,                 ODOM_ONLY],
+]
+TRAJECTORY += PILE_IN_N_OUT + [corner_face_y_pile] + GO_TO_BOX_AND_DEPOSIT + BACK_OUT_TO_MIDDLE
 
 loc_mod_pub = rospy.Publisher("/localization_mode", LocalizationMode, queue_size = 1)
 
